@@ -1,0 +1,14 @@
+  <dialog class="legal-dialog" id="legal-dialog" aria-labelledby="legal-dialog-title">
+    <header class="legal-dialog-header">
+      <h2 id="legal-dialog-title" data-i18n="Termos de Uso">Termos de Uso</h2>
+      <button class="legal-close" id="legal-close-button" type="button" aria-label="Fechar documento" data-i18n-aria-label="Fechar documento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </header>
+    <div class="legal-scroll" id="legal-scroll" tabindex="0" aria-label="Texto do documento" data-i18n-aria-label="Texto do documento">
+      <div id="legal-dialog-content" class="legal-content"></div>
+    </div>
+    <footer class="legal-dialog-footer">
+      <p class="legal-read-status" id="legal-read-status" role="status" aria-live="polite"></p>
+      <button class="legal-retry" id="legal-load-retry" type="button" hidden data-i18n="Tentar novamente">Tentar novamente</button>
+      <button class="auth-submit" id="legal-read-button" type="button" disabled data-i18n="Li este documento">Li este documento</button>
+    </footer>
+  </dialog>

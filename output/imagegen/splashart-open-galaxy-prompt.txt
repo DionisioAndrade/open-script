@@ -1,0 +1,13 @@
+Generated with the built-in image_gen tool.
+Reference: reference-open-galaxy.png, rendered from the original Light.svg.
+
+Use case: ads-marketing
+Asset type: finished branded splash art, widescreen 16:9, high-resolution landscape PNG.
+Primary request: create a cinematic splash art using the supplied Open Galaxy logo.
+Input image 1: exact brand identity reference. It is the original white and red Open Galaxy logo on a solid dark navy reference background, NOT a layout to duplicate.
+Scene/backdrop: deep dark navy #0F172A space, with a restrained atmospheric red #F34D4D nebula glow along the outer edges, a few tiny white stars, and one subtle sweeping orbital light arc framing the composition. Keep the middle quiet and very dark for readability. Rich depth, soft volumetric light and fine cinematic texture, tasteful and uncluttered.
+Subject: the SAME supplied complete Open Galaxy logo, crisp and flat, centered prominently, occupying about 64 percent of the canvas width, with generous breathing room. Preserve its actual unique geometry: custom geometric white lettering in two lines, "Open" above "Galaxy", including the distinctive split x; the integrated red side-profile astronaut helmet on the right with its three stars, sweeping outer arc and two inner curved signals. Maintain the exact relationship, proportions, spacing and silhouette of all logo components.
+Style/medium: polished cinematic brand key art; a sharply rendered two-dimensional identity over a softly illuminated atmospheric space background. Strong clean foreground/background separation. Elegant visual restraint.
+Color palette: #F34D4D red, #0F172A dark navy and #FFFFFF white only, with light/dark tonal variations for atmosphere.
+Text (verbatim): "Open Galaxy", only as the ORIGINAL referenced wordmark; no additional text.
+Constraints: use the input logo faithfully, do not redesign or replace the typography, do not separate the astronaut from the wordmark, do not crop any part of the logo. White lettering remains solid white and red mark remains solid red. Background light and stars do not cross or obscure logo shapes. No extra characters, spacecraft, planets, interface, buttons, loading bars, slogans, badges, frames or watermark. Produce one finished beautiful splash art image, 16:9 landscape.

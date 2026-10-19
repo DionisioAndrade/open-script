@@ -1,0 +1,70 @@
+{% extends 'accounts/base.html' %}
+
+{% block title_source %}OpenScript — criar conta{% endblock %}
+{% block title %}OpenScript — criar conta{% endblock %}
+
+{% block form %}
+  <div class="auth-heading">
+    <h1 id="auth-title" data-i18n="Crie sua conta">Crie sua conta</h1>
+    <p data-i18n="Prepare seu acesso ao OpenScript.">Prepare seu acesso ao OpenScript.</p>
+  </div>
+
+  <form class="auth-form" id="signup-form" method="post" action="{% url 'accounts:signup' %}" data-legal-read-url="{{ legal_read_url }}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="lang" value="{{ language|default:'pt-BR' }}">
+    <input type="hidden" name="terms_version" value="{{ terms_version }}">
+    <input type="hidden" name="privacy_version" value="{{ privacy_version }}">
+    {% if form.errors %}
+      <div class="form-alert" id="auth-errors" role="alert" tabindex="-1">
+        <strong data-i18n="Confira os dados para criar sua conta.">Confira os dados para criar sua conta.</strong>
+        {% for error in form.non_field_errors %}<p data-i18n="{{ error }}">{{ error }}</p>{% endfor %}
+        {% for error in form.terms_version.errors %}<p data-i18n="{{ error }}">{{ error }}</p>{% endfor %}
+        {% for error in form.privacy_version.errors %}<p data-i18n="{{ error }}">{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="auth-field">
+      <label for="id_display_name" data-i18n="Nome">Nome</label>
+      <input type="text" id="id_display_name" name="display_name" value="{{ form.display_name.value|default_if_none:'' }}" maxlength="100" autocomplete="name" required{% if form.display_name.errors %} aria-invalid="true" aria-describedby="id_display_name-errors"{% endif %}>
+      {% if form.display_name.errors %}<ul class="field-errors" id="id_display_name-errors">{% for error in form.display_name.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="auth-field">
+      <label for="id_email" data-i18n="E-mail">E-mail</label>
+      <input type="email" id="id_email" name="email" value="{{ form.email.value|default_if_none:'' }}" maxlength="254" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required{% if form.email.errors %} aria-invalid="true" aria-describedby="id_email-errors"{% endif %}>
+      {% if form.email.errors %}<ul class="field-errors" id="id_email-errors">{% for error in form.email.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="auth-field">
+      <label for="id_password1" data-i18n="Senha">Senha</label>
+      <div class="password-input">
+        <input type="password" id="id_password1" name="password1" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="password-help{% if form.password1.errors %} id_password1-errors{% endif %}"{% if form.password1.errors %} aria-invalid="true"{% endif %}>
+        <button class="password-toggle" type="button" data-password-target="id_password1" aria-controls="id_password1" aria-pressed="false" aria-label="Mostrar senha" data-i18n-aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="password-slash" d="M4 4l16 16"/></svg></button>
+      </div>
+      <p class="field-help" id="password-help" data-i18n="Use pelo menos 8 caracteres. Evite senhas comuns, dados pessoais ou apenas números.">Use pelo menos 8 caracteres. Evite senhas comuns, dados pessoais ou apenas números.</p>
+      {% if form.password1.errors %}<ul class="field-errors" id="id_password1-errors">{% for error in form.password1.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="auth-field">
+      <label for="id_password2" data-i18n="Confirmar senha">Confirmar senha</label>
+      <div class="password-input">
+        <input type="password" id="id_password2" name="password2" autocomplete="new-password" minlength="8" maxlength="128" required{% if form.password2.errors %} aria-invalid="true" aria-describedby="id_password2-errors"{% endif %}>
+        <button class="password-toggle" type="button" data-password-target="id_password2" aria-controls="id_password2" aria-pressed="false" aria-label="Mostrar senha" data-i18n-aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="password-slash" d="M4 4l16 16"/></svg></button>
+      </div>
+      {% if form.password2.errors %}<ul class="field-errors" id="id_password2-errors">{% for error in form.password2.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    {% include 'accounts/consent_fields.html' %}
+
+    <button class="auth-submit" id="signup-submit" type="submit" data-submit-source="Criar conta" aria-describedby="consent-help"><span data-i18n="Criar conta">Criar conta</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+  </form>
+
+  {% include 'accounts/google_button.html' %}
+
+  <p class="auth-switch"><span data-i18n="Já tem uma conta?">Já tem uma conta?</span> <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" data-auth-language-link data-i18n="Entrar">Entrar</a></p>
+{% endblock %}
+
+{% block dialogs %}
+  {% include 'accounts/consent_dialog.html' %}
+{% endblock %}

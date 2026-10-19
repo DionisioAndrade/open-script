@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language|default:'pt-BR' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <title data-i18n="{% block title_source %}OpenScript — entrar{% endblock %}">{% block title %}OpenScript — entrar{% endblock %}</title>
+  <link rel="icon" href="{% static 'studio/favicon.ico' %}" sizes="16x16 32x32 48x48 64x64">
+  <link rel="icon" href="{% static 'studio/favicon.svg' %}?v=2" sizes="any" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'studio/apple-touch-icon.png' %}" sizes="180x180">
+  <link rel="stylesheet" href="{% static 'accounts/auth.css' %}">
+  <script src="{% static 'studio/i18n.js' %}" defer></script>
+  <script src="{% static 'accounts/auth.js' %}" defer></script>
+</head>
+<body class="auth-page {% block page_class %}{% endblock %}"{% if user.is_authenticated %} data-user-key="{{ user.storage_id }}"{% endif %}>
+  <header class="auth-header">
+    <a class="auth-brand" href="{% url 'studio:index' %}" aria-label="OpenScript, página inicial" data-i18n-aria-label="OpenScript, página inicial">
+      <img src="{% static 'studio/logo.svg' %}" width="960" height="327" alt="OpenScript">
+    </a>
+    <div class="auth-language">
+      <label for="language-select" data-i18n="Idioma">Idioma</label>
+      <select id="language-select" name="language">
+        <option value="pt-BR" lang="pt-BR">Português</option>
+        <option value="en" lang="en">English</option>
+        <option value="es" lang="es">Español</option>
+      </select>
+    </div>
+  </header>
+
+  {% block main %}
+  <main class="auth-layout">
+    <aside class="auth-intro" aria-label="Seu estúdio de gravação" data-i18n-aria-label="Seu estúdio de gravação">
+      <div class="intro-label"><span aria-hidden="true"></span><span data-i18n="SEU ESTÚDIO">SEU ESTÚDIO</span></div>
+      <div class="intro-script">
+        <p data-i18n="Uma ideia.">Uma ideia.</p>
+        <p class="intro-current" data-i18n="Um roteiro.">Um roteiro.</p>
+        <p data-i18n="Seu vídeo.">Seu vídeo.</p>
+      </div>
+      <p class="intro-caption" data-i18n="Escreva, ensaie e grave no seu ritmo.">Escreva, ensaie e grave no seu ritmo.</p>
+    </aside>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      {% block form %}{% endblock %}
+    </section>
+  </main>
+  {% endblock %}
+
+  <footer class="auth-footer" aria-label="Documentos do OpenScript" data-i18n-aria-label="Documentos do OpenScript">
+    <a id="auth-guest-link" href="{% url 'studio:index' %}" data-i18n="Continuar sem login">Continuar sem login</a>
+    <a href="{% url 'accounts:terms' %}" data-public-legal-link data-i18n="Termos de Uso">Termos de Uso</a>
+    <a href="{% url 'accounts:privacy' %}" data-public-legal-link data-i18n="Política de Privacidade">Política de Privacidade</a>
+  </footer>
+  {% block dialogs %}{% endblock %}
+</body>
+</html>

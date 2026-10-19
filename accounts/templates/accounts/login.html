@@ -1,0 +1,45 @@
+{% extends 'accounts/base.html' %}
+
+{% block form %}
+  <div class="auth-heading">
+    <h1 id="auth-title" data-i18n="Entre no seu estúdio">Entre no seu estúdio</h1>
+    <p data-i18n="Use seu e-mail e sua senha para continuar.">Use seu e-mail e sua senha para continuar.</p>
+  </div>
+
+  <form class="auth-form" method="post" action="{% url 'accounts:login' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="lang" value="{{ language|default:'pt-BR' }}">
+    {% if form.errors %}
+      <div class="form-alert" id="auth-errors" role="alert" tabindex="-1">
+        <strong data-i18n="Confira os dados para entrar.">Confira os dados para entrar.</strong>
+        {% for error in form.non_field_errors %}<p data-i18n="{{ error }}">{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="auth-field">
+      <label for="id_username" data-i18n="E-mail">E-mail</label>
+      <input type="email" id="id_username" name="username" value="{{ form.username.value|default_if_none:'' }}" maxlength="254" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required{% if form.username.errors %} aria-invalid="true" aria-describedby="id_username-errors"{% endif %}>
+      {% if form.username.errors %}<ul class="field-errors" id="id_username-errors">{% for error in form.username.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="auth-field">
+      <label for="id_password" data-i18n="Senha">Senha</label>
+      <div class="password-input">
+        <input type="password" id="id_password" name="password" autocomplete="current-password" maxlength="128" required{% if form.password.errors %} aria-invalid="true" aria-describedby="id_password-errors"{% endif %}>
+        <button class="password-toggle" type="button" data-password-target="id_password" aria-controls="id_password" aria-pressed="false" aria-label="Mostrar senha" data-i18n-aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="password-slash" d="M4 4l16 16"/></svg></button>
+      </div>
+      {% if form.password.errors %}<ul class="field-errors" id="id_password-errors">{% for error in form.password.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="login-options">
+      <label class="remember-control"><input id="id_remember_me" name="remember_me" type="checkbox"{% if form.remember_me.value %} checked{% endif %}><span data-i18n="Manter conectado neste dispositivo">Manter conectado neste dispositivo</span></label>
+      <a class="auth-recovery-link" href="{% url 'accounts:password_reset' %}" data-auth-language-link data-i18n="Esqueci minha senha">Esqueci minha senha</a>
+    </div>
+    <button class="auth-submit" type="submit" data-submit-source="Entrar"><span data-i18n="Entrar">Entrar</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+  </form>
+
+  {% include 'accounts/google_button.html' %}
+
+  <p class="auth-switch"><span data-i18n="Ainda não tem uma conta?">Ainda não tem uma conta?</span> <a href="{% url 'accounts:signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}" data-auth-language-link data-i18n="Criar conta">Criar conta</a></p>
+{% endblock %}

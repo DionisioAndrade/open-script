@@ -1,0 +1,10 @@
+{% extends 'accounts/base.html' %}
+{% block title_source %}OpenScript — entrada com Google{% endblock %}
+{% block title %}OpenScript — entrada com Google{% endblock %}
+{% block form %}
+  <div class="auth-heading auth-heading-message">
+    <h1 id="auth-title" data-i18n="Não foi possível entrar com Google">Não foi possível entrar com Google</h1>
+    <p data-i18n="{{ google_error_message }}">{{ google_error_message }}</p>
+  </div>
+  <a class="auth-submit" href="{% url 'accounts:login' %}" data-auth-language-link><span data-i18n="Voltar para entrar">Voltar para entrar</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+{% endblock %}

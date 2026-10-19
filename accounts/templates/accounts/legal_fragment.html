@@ -1,0 +1,14 @@
+<div class="legal-fragment" data-legal-document="{{ document.kind }}" data-legal-version="{{ document.version }}" data-legal-language="{{ language }}">
+  <p class="legal-version"><span data-i18n="Versão">Versão</span> {{ document.version }}{% if document.updated_at %} · <span data-i18n="Atualizado em">Atualizado em</span> {{ document.updated_at }}{% endif %}</p>
+  {% for section in document.sections %}
+    <section class="legal-section">
+      {% if heading_level == 'h2' %}<h2>{{ section.title }}</h2>{% else %}<h3>{{ section.title }}</h3>{% endif %}
+      {% for paragraph in section.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+    </section>
+  {% endfor %}
+  {% if document.references %}
+    <ul class="legal-references">
+      {% for reference in document.references %}<li><a href="{{ reference.url }}" target="_blank" rel="noopener noreferrer">{{ reference.title }}</a></li>{% endfor %}
+    </ul>
+  {% endif %}
+</div>

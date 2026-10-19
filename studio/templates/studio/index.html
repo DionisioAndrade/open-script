@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="description" content="Escreva, ensaie e grave. Um estúdio de vídeo com teleprompter direto no seu navegador." data-i18n-content="Escreva, ensaie e grave. Um estúdio de vídeo com teleprompter direto no seu navegador.">
+  <title data-i18n="OpenScript — seu estúdio de gravação">OpenScript — seu estúdio de gravação</title>
+  <link rel="icon" href="{% static 'studio/favicon.ico' %}" sizes="16x16 32x32 48x48 64x64">
+  <link rel="icon" href="{% static 'studio/favicon-32x32.png' %}" sizes="32x32" type="image/png">
+  <link rel="icon" href="{% static 'studio/favicon-16x16.png' %}" sizes="16x16" type="image/png">
+  <link rel="icon" href="{% static 'studio/favicon.svg' %}?v=2" sizes="any" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'studio/apple-touch-icon.png' %}" sizes="180x180">
+  <link rel="manifest" href="{% static 'studio/manifest.webmanifest' %}">
+  <meta name="apple-mobile-web-app-title" content="OpenScript">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="{% static 'studio/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'studio/account.css' %}">
+  {{ export_catalog|json_script:"studio-export-catalog" }}
+  <script src="{% static 'studio/i18n.js' %}" defer></script>
+  <script src="{% static 'studio/frame-pump.js' %}" defer></script>
+  <script src="{% static 'studio/exporter.js' %}" defer></script>
+  <script src="{% static 'studio/export-profiles.js' %}" defer></script>
+  <script src="{% static 'studio/studio.js' %}" defer></script>
+</head>
+<body class="camera-layout"{% if request.user.is_authenticated %} data-user-key="{{ request.user.storage_id }}"{% endif %} data-session-url="{% url 'accounts:session' %}">
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 5-3v10l-5-3Z"/></symbol>
+    <symbol id="i-script" viewBox="0 0 24 24"><path d="M7 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M9 12h6M9 16h5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><rect x="7" y="4" width="4" height="6" rx="2"/><rect x="14" y="14" width="4" height="6" rx="2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a1 1 0 0 1 1-1h5l3 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M3 9h18"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="i-mirror" viewBox="0 0 24 24"><path d="M12 3v18M8 6 3 18h5ZM16 6l5 12h-5Z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16Z"/></symbol>
+  </svg>
+
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="OpenScript, página inicial" data-i18n-aria-label="OpenScript, página inicial">
+      <img class="brand-logo" src="{% static 'studio/logo.svg' %}" width="960" height="327" alt="Open Script">
+    </a>
+    <nav class="main-nav" aria-label="Navegação principal" data-i18n-aria-label="Navegação principal">
+      <button class="nav-link is-current" id="studio-btn" type="button" aria-current="page"><svg class="icon"><use href="#i-camera"/></svg> <span data-i18n="Estúdio">Estúdio</span></button>
+      <button class="nav-link" id="recordings-btn" type="button"><svg class="icon"><use href="#i-folder"/></svg> <span data-i18n="Gravações">Gravações</span> <span class="count-badge" id="recording-count">0</span></button>
+    </nav>
+  </header>
+
+  <main class="workspace">
+    <div class="workspace-heading">
+      <div><div class="eyebrow"><span></span> <span data-i18n="MENOS IMPROVISO. MAIS VOCÊ.">MENOS IMPROVISO. MAIS VOCÊ.</span></div><h1><span data-i18n="Uma ideia. Um roteiro.">Uma ideia. Um roteiro.</span> <span data-i18n="Seu vídeo.">Seu vídeo.</span></h1><p data-i18n="Encontre seu ritmo e deixe a conversa fluir.">Encontre seu ritmo e deixe a conversa fluir.</p></div>
+    </div>
+
+    <div class="studio-layout">
+      <section class="panel-shell script-shell" id="script-panel" aria-labelledby="script-heading">
+        <div class="panel script-panel">
+          <div class="panel-heading"><div class="panel-title"><span class="section-icon"><svg class="icon"><use href="#i-script"/></svg></span><h2 id="script-heading" data-i18n="Seu roteiro">Seu roteiro</h2></div><div class="panel-heading-actions"><button class="icon-button" id="import-script-btn" type="button" aria-label="Importar roteiro de um arquivo de texto" title="Importar arquivo .txt" data-i18n-aria-label="Importar roteiro de um arquivo de texto" data-i18n-title="Importar arquivo .txt"><svg class="icon"><use href="#i-upload"/></svg></button><button class="icon-button sheet-close" id="close-script-btn" type="button" aria-label="Voltar à câmera" data-i18n-aria-label="Voltar à câmera"><svg class="icon"><use href="#i-close"/></svg></button></div></div>
+          <input id="script-file-input" type="file" accept=".txt,text/plain" hidden>
+          <div class="script-title-wrap"><label class="sr-only" for="script-title" data-i18n="Título do roteiro">Título do roteiro</label><input id="script-title" class="script-title" maxlength="100" value="Uma ideia de cada vez" placeholder="Dê um nome ao seu roteiro" autocomplete="off" data-i18n-placeholder="Dê um nome ao seu roteiro"><span data-i18n="ROTEIRO">ROTEIRO</span></div>
+          <label class="sr-only" for="script-input" data-i18n="Texto para ler durante a gravação">Texto para ler durante a gravação</label>
+          <textarea id="script-input" spellcheck="true" placeholder="Escreva ou cole aqui o que você quer dizer…" data-i18n-placeholder="Escreva ou cole aqui o que você quer dizer…">Toda boa conversa começa com uma ideia.
+
+E, às vezes, tudo o que a gente precisa é de um espaço para compartilhar essa ideia com o mundo.
+
+Hoje, eu quero falar sobre algo simples: dar o primeiro passo.
+
+Você não precisa ter todas as respostas. Não precisa esperar pelo momento perfeito.
+
+Comece com o que você tem. Fale do que você acredita. E permita que a sua voz encontre o seu caminho.
+
+Porque o próximo capítulo da sua história começa com você.</textarea>
+          <div class="script-stats"><span><strong id="word-count">0</strong> <span data-i18n="palavras">palavras</span></span><span><svg class="icon"><use href="#i-clock"/></svg><span id="reading-time">~ 1 min</span></span></div>
+          <div class="script-panel-footer"><span id="save-status"><svg class="icon"><use href="#i-check"/></svg> Salvo neste navegador</span><button id="clear-script-btn" class="text-button" type="button" data-i18n="Limpar">Limpar</button></div>
+        </div>
+      </section>
+
+      <section class="stage-column" aria-label="Câmera e gravação" data-i18n-aria-label="Câmera e gravação">
+        <div class="stage-heading"><div class="stage-label"><span class="live-dot" id="recording-dot"></span><span id="recording-status">PRONTO PARA CRIAR</span></div><span class="quality-tag">1080p <span>·</span> 9:16</span></div>
+        <div class="preview-shell">
+          <div class="preview-stage" id="preview-stage">
+            <video id="camera-video" autoplay playsinline muted aria-label="Prévia ao vivo da câmera" data-i18n-aria-label="Prévia ao vivo da câmera"></video>
+            <div class="stage-vignette" aria-hidden="true"></div>
+            <div class="camera-placeholder" id="camera-placeholder">
+              <img class="camera-brand-logo" src="{% static 'studio/logo.svg' %}" width="960" height="327" alt="Open Script">
+              <h2 id="camera-placeholder-title">Autorize a câmera e o microfone</h2><p id="camera-placeholder-message">Permita o acesso à câmera e ao microfone para começar.</p>
+              <button class="record-button placeholder-camera-button" id="camera-placeholder-btn" type="button"><svg class="icon"><use href="#i-camera"/></svg><span>Ativar câmera e microfone</span></button>
+            </div>
+            <div class="frame-corner corner-tl" aria-hidden="true"></div><div class="frame-corner corner-tr" aria-hidden="true"></div><div class="frame-corner corner-bl" aria-hidden="true"></div><div class="frame-corner corner-br" aria-hidden="true"></div>
+            <div class="prompt-overlay" id="prompt-overlay" aria-label="Texto do teleprompter" data-i18n-aria-label="Texto do teleprompter"><div id="prompt-text" class="prompt-text"></div></div>
+            <div class="eye-guide" aria-hidden="true"><span></span><span></span></div>
+            <div class="immersive-ui">
+              <header class="camera-ui-top">
+                <button class="camera-tool-button camera-library-button" id="immersive-recordings-btn" type="button" aria-label="Revisar gravações" data-i18n-aria-label="Revisar gravações"><svg class="icon"><use href="#i-folder"/></svg><span data-i18n="Gravações">Gravações</span></button>
+                <div class="camera-timer" aria-label="Tempo da gravação e tempo estimado do roteiro" data-i18n-aria-label="Tempo da gravação e tempo estimado do roteiro"><span class="sr-only" id="immersive-recording-status">Pronto para gravar</span><div class="camera-timer-values"><span class="timer-record"><span class="live-dot" id="immersive-recording-dot"></span><span>REC</span><strong id="immersive-recording-time">00:00</strong></span><span class="timer-reading"><span data-i18n="TEXTO">TEXTO</span><strong id="immersive-reading-time">00:00</strong></span><span class="capture-format">9:16</span></div><label class="sr-only" for="immersive-prompt-progress" data-i18n="Posição do roteiro">Posição do roteiro</label><input id="immersive-prompt-progress" type="range" min="0" max="100" step="0.1" value="0"><span class="sr-only" id="immersive-progress-label">0%</span></div>
+                <button class="camera-tool-button camera-edit-button" id="editor-btn" type="button" aria-controls="script-panel" aria-expanded="false"><svg class="icon"><use href="#i-edit"/></svg><span data-i18n="Editar roteiro">Editar roteiro</span></button>
+              </header>
+              <nav class="camera-ui-bottom" aria-label="Controles do teleprompter e da gravação" data-i18n-aria-label="Controles do teleprompter e da gravação">
+                <div class="camera-ui-player"><button class="camera-icon-button" id="immersive-reset-btn" type="button" aria-label="Voltar ao início do roteiro" data-i18n-aria-label="Voltar ao início do roteiro"><svg class="icon"><use href="#i-reset"/></svg></button><button class="camera-tool-button prompt-start-button" id="immersive-prompt-play-btn" type="button"><svg class="icon"><use href="#i-play"/></svg><span>Ensaiar</span></button><button class="record-button" id="immersive-record-btn" type="button"><span class="record-button-dot"></span><span>Iniciar gravação</span></button><button class="camera-icon-button" id="immersive-pause-btn" type="button" disabled aria-label="Pausar gravação"><svg class="icon"><use href="#i-pause"/></svg></button><button class="camera-icon-button" id="immersive-stop-btn" type="button" disabled aria-label="Parar gravação"><svg class="icon"><use href="#i-stop"/></svg></button></div>
+                <div class="camera-ui-speed"><button class="camera-icon-button" id="settings-btn" type="button" aria-label="Configurações" title="Configurações" aria-controls="settings-panel" aria-expanded="false" data-i18n-aria-label="Configurações" data-i18n-title="Configurações"><svg class="icon"><use href="#i-settings"/></svg></button><button class="camera-icon-button" id="immersive-camera-btn" type="button" aria-label="Ativar câmera"><svg class="icon"><use href="#i-camera"/></svg></button><div class="quick-speed"><label class="sr-only" for="immersive-speed-input" data-i18n="Velocidade de leitura">Velocidade de leitura</label><input id="immersive-speed-input" type="range" min="10" max="100" step="1" value="40"><output id="immersive-speed-value" for="immersive-speed-input">40 px/s</output></div><button class="camera-icon-button" id="immersive-fullscreen-btn" type="button" aria-label="Expandir câmera para tela cheia"><svg class="icon"><use href="#i-expand"/></svg></button></div>
+              </nav>
+            </div>
+            <div class="stage-bottom"><span class="stage-caption"><svg class="icon"><use href="#i-script"/></svg> TELEPROMPTER</span><button class="stage-fullscreen" id="fullscreen-btn" type="button" aria-label="Expandir prévia para tela cheia" title="Tela cheia"><svg class="icon"><use href="#i-expand"/></svg></button></div>
+            <div class="countdown-overlay" id="countdown-overlay" hidden><span id="countdown-label">Prepare-se para gravar</span><strong id="countdown-number">5</strong><small data-i18n="Pressione Esc ou Parar para cancelar">Pressione Esc ou Parar para cancelar</small></div>
+          </div>
+        </div>
+        <div class="preview-meta"><span id="camera-status"><span class="status-dot muted"></span> Câmera desligada</span><span id="microphone-status"><svg class="icon"><use href="#i-mic"/></svg> Microfone desligado</span></div>
+        <div class="transport-shell"><div class="transport">
+          <div class="prompt-timeline"><div class="timeline-label"><span data-i18n="Posição do roteiro">Posição do roteiro</span><span id="progress-label">0%</span></div><label class="sr-only" for="prompt-progress" data-i18n="Posição de leitura do roteiro">Posição de leitura do roteiro</label><input id="prompt-progress" type="range" min="0" max="100" step="0.1" value="0"></div>
+          <div class="recording-controls"><div class="rehearsal-controls"><button class="icon-button reset-button" id="reset-script-btn" type="button" aria-label="Voltar ao início do roteiro" title="Voltar ao início" data-i18n-aria-label="Voltar ao início do roteiro" data-i18n-title="Voltar ao início"><svg class="icon"><use href="#i-reset"/></svg></button><button class="secondary-button rehearsal-button" id="prompt-play-btn" type="button"><svg class="icon"><use href="#i-play"/></svg><span>Ensaiar</span></button></div><button class="record-button" id="record-btn" type="button"><span class="record-button-dot"></span><span>Iniciar gravação</span></button><div class="record-actions"><button class="icon-button" id="pause-record-btn" type="button" disabled aria-label="Pausar gravação" title="Pausar gravação"><svg class="icon"><use href="#i-pause"/></svg></button><button class="icon-button" id="stop-btn" type="button" disabled aria-label="Parar gravação" title="Parar gravação"><svg class="icon"><use href="#i-stop"/></svg></button></div></div>
+          <div class="transport-footer"><span><svg class="icon"><use href="#i-clock"/></svg><strong id="recording-time">00:00</strong></span><span data-i18n="O roteiro aparece só para você.">O roteiro aparece só para você.</span><span class="keyboard-hint"><kbd>R</kbd> <span data-i18n="para gravar">para gravar</span></span></div>
+        </div></div>
+      </section>
+
+      <section class="panel-shell settings-shell" id="settings-panel" aria-labelledby="settings-heading"><div class="panel settings-panel">
+        <div class="panel-heading"><div class="panel-title"><img class="settings-brand-icon" src="{% static 'studio/app-icon.svg' %}" width="512" height="512" alt="Open Script"><h2 id="settings-heading" data-i18n="Configurações">Configurações</h2></div><button class="icon-button sheet-close" id="close-settings-btn" type="button" aria-label="Voltar à câmera" data-i18n-aria-label="Voltar à câmera"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="settings-group account-group{% if not request.user.is_authenticated %} account-group-guest{% endif %}" aria-labelledby="account-heading">
+          <h3 id="account-heading" class="field-label" data-i18n="Sua conta">Sua conta</h3>
+          {% if request.user.is_authenticated %}
+          <p class="account-label" data-i18n="Conectado como">Conectado como</p>
+          <p id="account-name" class="account-name">{{ request.user.display_name }}</p>
+          <p id="account-email" class="account-email">{{ request.user.email }}</p>
+          {% if google_connected %}
+          <p class="account-google-status" data-i18n="Google conectado">Google conectado</p>
+          {% else %}
+          <form id="google-connect-form" method="post" action="{% url 'accounts:google_login' %}" data-account-form>
+            {% csrf_token %}
+            <input type="hidden" name="process" value="connect">
+            <input type="hidden" name="lang" value="pt-BR">
+            <button id="google-connect-btn" class="account-google-connect" type="submit" data-available="{{ google_enabled|yesno:'true,false' }}" data-i18n="Conectar Google"{% if not google_enabled %} disabled{% endif %}>Conectar Google</button>
+          </form>
+          {% if not google_enabled %}<p class="setting-description" data-i18n="A entrada com Google estará disponível em breve.">A entrada com Google estará disponível em breve.</p>{% endif %}
+          {% endif %}
+          {% else %}
+          <p class="account-guest-description" data-i18n="Você pode gravar sem criar uma conta.">Você pode gravar sem criar uma conta.</p>
+          <div class="account-entry-actions">
+            <a id="account-login-link" class="account-entry-primary" href="{% url 'accounts:login' %}?next={% url 'studio:index' %}" data-account-navigation data-i18n="Entrar">Entrar</a>
+            <a id="account-signup-link" class="account-entry-secondary" href="{% url 'accounts:signup' %}?next={% url 'studio:index' %}" data-account-navigation data-i18n="Criar conta">Criar conta</a>
+          </div>
+          {% endif %}
+          <nav class="account-legal-links" aria-label="Documentos da conta" data-i18n-aria-label="Documentos da conta">
+            <a href="{% url 'accounts:terms' %}" target="_blank" rel="noopener" data-i18n="Termos de Uso">Termos de Uso</a>
+            <a href="{% url 'accounts:privacy' %}" target="_blank" rel="noopener" data-i18n="Política de Privacidade">Política de Privacidade</a>
+          </nav>
+          <p id="account-action-note" class="setting-description" role="status" hidden></p>
+          {% if request.user.is_authenticated %}
+          <form id="logout-form" method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button id="logout-btn" class="account-logout" type="submit" data-i18n="Sair da conta">Sair da conta</button>
+          </form>
+          <div id="account-session-warning" class="account-session-warning" role="status" hidden>
+            <p data-i18n="Sua sessão terminou. Salve os vídeos antes de entrar novamente.">Sua sessão terminou. Salve os vídeos antes de entrar novamente.</p>
+            <a href="{% url 'accounts:login' %}?next={% url 'studio:index' %}" data-account-navigation data-i18n="Entrar novamente">Entrar novamente</a>
+            <a id="account-guest-link" href="{% url 'studio:index' %}" data-account-navigation data-i18n="Continuar sem login">Continuar sem login</a>
+          </div>
+          {% endif %}
+        </div>
+        <div class="settings-group app-language-group"><label for="language-select" class="field-label" data-i18n="Idioma do aplicativo">Idioma do aplicativo</label><select id="language-select" aria-describedby="language-note"><option value="pt-BR" lang="pt-BR">Português (Brasil)</option><option value="en" lang="en">English</option><option value="es" lang="es">Español</option></select><p id="language-note" class="setting-description" data-i18n="Sua preferência é salva neste navegador.">Sua preferência é salva neste navegador.</p></div>
+        <div class="settings-divider"></div>
+        <h3 class="settings-section-heading" data-i18n="Leitura e câmera">Leitura e câmera</h3>
+        <div class="settings-group speed-group"><div class="setting-label"><label for="speed-input" data-i18n="Velocidade de leitura">Velocidade de leitura</label><output id="speed-value" for="speed-input">40 px/s</output></div><input id="speed-input" type="range" min="10" max="100" step="1" value="40"><div class="range-captions"><span data-i18n="Sem pressa">Sem pressa</span><span data-i18n="No seu ritmo">No seu ritmo</span></div></div>
+        <div class="settings-divider"></div>
+        <div class="settings-group"><label for="font-select" class="field-label" data-i18n="Fonte">Fonte</label><select id="font-select"><option value="sans" data-i18n="Sem serifa">Sem serifa</option><option value="serif" data-i18n="Serifa">Serifa</option><option value="mono" data-i18n="Monoespaçada">Monoespaçada</option></select></div>
+        <div class="settings-group"><div class="setting-label"><label for="size-input" data-i18n="Tamanho do texto">Tamanho do texto</label><output id="size-value" for="size-input">36 px</output></div><input id="size-input" type="range" min="20" max="120" value="36"><div class="range-captions font-size-captions"><span>Aa</span><span>Aa</span></div></div>
+        <div class="settings-group"><label class="field-label" for="text-color" data-i18n="Cor do texto">Cor do texto</label><div class="color-options"><button class="color-swatch is-active" data-color="#ffffff" style="--swatch:#ffffff" type="button" aria-label="Texto branco" aria-pressed="true" data-i18n-aria-label="Texto branco"></button><button class="color-swatch" data-color="#f34d4d" style="--swatch:#f34d4d" type="button" aria-label="Texto vermelho" aria-pressed="false" data-i18n-aria-label="Texto vermelho"></button><button class="color-swatch" data-color="#0f172a" style="--swatch:#0f172a" type="button" aria-label="Texto azul escuro" aria-pressed="false" data-i18n-aria-label="Texto azul escuro"></button><label class="custom-color" title="Escolher outra cor" data-i18n-title="Escolher outra cor"><input type="color" id="text-color" value="#ffffff" aria-label="Escolher cor personalizada" data-i18n-aria-label="Escolher cor personalizada"><span aria-hidden="true">+</span></label></div></div>
+        <div class="settings-group"><div class="setting-label"><label for="opacity-input" data-i18n="Fundo da janela">Fundo da janela</label><output id="opacity-value" for="opacity-input">0%</output></div><input id="opacity-input" type="range" min="0" max="70" value="0"><div class="range-captions"><span data-i18n="Transparente">Transparente</span><span data-i18n="Mais contraste">Mais contraste</span></div></div>
+        <div class="settings-divider"></div>
+        <label class="toggle-row" for="show-prompt-input"><span><svg class="icon"><use href="#i-eye"/></svg> <span data-i18n="Mostrar roteiro">Mostrar roteiro</span></span><input type="checkbox" id="show-prompt-input" checked><span class="toggle-track" aria-hidden="true"></span></label>
+        <label class="toggle-row" for="mirror-input"><span><svg class="icon"><use href="#i-mirror"/></svg> <span data-i18n="Espelhar câmera">Espelhar câmera</span></span><input type="checkbox" id="mirror-input" checked><span class="toggle-track" aria-hidden="true"></span></label>
+        <details class="device-details"><summary><svg class="icon"><use href="#i-settings"/></svg> <span data-i18n="Câmera e microfone">Câmera e microfone</span> <span class="details-chevron">⌄</span></summary><div class="device-settings"><div><label for="camera-select" data-i18n="Câmera">Câmera</label><select id="camera-select"><option value="">Câmera padrão</option></select></div><div><label for="microphone-select" data-i18n="Microfone">Microfone</label><select id="microphone-select"><option value="">Microfone padrão</option></select></div></div></details>
+        <button id="camera-btn" class="camera-toggle secondary-button" type="button"><svg class="icon"><use href="#i-camera"/></svg><span>Ativar câmera</span></button>
+        <div class="settings-tip"><span class="tip-star" aria-hidden="true">✧</span><p><span data-i18n="Olhe para a lente.">Olhe para a lente.</span><br><strong data-i18n="O texto cuida do resto.">O texto cuida do resto.</strong></p></div>
+      </div></section>
+    </div>
+    <button class="mobile-sheet-backdrop" id="sheet-backdrop" type="button" tabindex="-1" aria-label="Fechar painel e voltar à câmera" data-i18n-aria-label="Fechar painel e voltar à câmera"></button>
+    <div id="status-message" class="status-message" role="status" aria-live="polite" hidden></div>
+    <footer class="workspace-footer"><span><svg class="icon"><use href="#i-lock"/></svg> <span data-i18n="Vídeos gravados no seu navegador, com a sua privacidade em primeiro lugar.">Vídeos gravados no seu navegador, com a sua privacidade em primeiro lugar.</span></span><span class="footer-signature"><span data-i18n="FEITO PARA A SUA VOZ">FEITO PARA A SUA VOZ</span> <span>↗</span></span></footer>
+  </main>
+
+  <dialog id="recordings-dialog" class="studio-dialog" aria-labelledby="recordings-heading"><div class="dialog-heading"><div><span class="eyebrow" data-i18n="SEUS TAKES">SEUS TAKES</span><h2 id="recordings-heading" data-i18n="Gravações desta sessão">Gravações desta sessão</h2></div><button id="close-recordings-btn" class="icon-button" type="button" aria-label="Fechar gravações" data-i18n-aria-label="Fechar gravações"><svg class="icon"><use href="#i-close"/></svg></button></div><p class="dialog-intro" data-i18n="Confira seu vídeo e exporte os takes que quiser guardar. Ao recarregar esta página, eles serão removidos.">Confira seu vídeo e exporte os takes que quiser guardar. Ao recarregar esta página, eles serão removidos.</p><div id="recordings-empty" class="empty-recordings"><svg class="icon"><use href="#i-camera"/></svg><h3 data-i18n="Seu primeiro take está por vir.">Seu primeiro take está por vir.</h3><p data-i18n="As gravações aparecem aqui quando você terminar.">As gravações aparecem aqui quando você terminar.</p></div><div id="recordings-list" class="recordings-list"></div></dialog>
+  <dialog id="export-dialog" class="studio-dialog export-dialog" aria-labelledby="export-heading" aria-describedby="export-note">
+    <div class="dialog-heading">
+      <div><span class="eyebrow" data-i18n="SEU VÍDEO, PRONTO PARA SAIR">SEU VÍDEO, PRONTO PARA SAIR</span><h2 id="export-heading" data-i18n="Exportar vídeo">Exportar vídeo</h2></div>
+      <button id="close-export-btn" class="icon-button" type="button" aria-label="Fechar exportação" data-i18n-aria-label="Fechar exportação"><svg class="icon"><use href="#i-close"/></svg></button>
+    </div>
+    <p id="export-recording-title" class="export-recording-title"></p>
+    <div class="export-layout">
+      <div class="export-fields">
+        <div class="export-field export-field-full">
+          <label for="export-profile" data-i18n="Destino do vídeo">Destino do vídeo</label>
+          <select id="export-profile" aria-describedby="export-profile-note"><option value="custom" data-i18n="Personalizado">Personalizado</option></select>
+          <p id="export-profile-note" class="export-profile-note"></p>
+        </div>
+        <div class="export-field export-field-full">
+          <label for="export-filename" data-i18n="Nome do arquivo">Nome do arquivo</label>
+          <input id="export-filename" type="text" maxlength="100" value="Meu vídeo" autocomplete="off" spellcheck="false" placeholder="Dê um nome ao seu vídeo" data-i18n-placeholder="Dê um nome ao seu vídeo">
+        </div>
+        <div class="export-field">
+          <label for="export-format" data-i18n="Formato">Formato</label>
+          <select id="export-format"><option value="original">Original</option></select>
+        </div>
+        <div class="export-field">
+          <label for="export-aspect" data-i18n="Proporção">Proporção</label>
+          <select id="export-aspect"><option value="9:16" selected>9:16</option><option value="4:5">4:5</option><option value="1:1">1:1</option><option value="16:9">16:9</option><option value="2:3">2:3</option></select>
+        </div>
+        <div class="export-field">
+          <label for="export-resolution" data-i18n="Resolução">Resolução</label>
+          <select id="export-resolution"><option value="360">360 × 640 · 360p</option><option value="720" selected>720 × 1280 · 720p</option><option value="1080">1080 × 1920 · 1080p</option></select>
+        </div>
+        <div class="export-field">
+          <label for="export-quality" data-i18n="Qualidade">Qualidade</label>
+          <select id="export-quality"><option value="compact" data-i18n="Leve">Leve</option><option value="balanced" selected data-i18n="Equilibrada">Equilibrada</option><option value="high" data-i18n="Alta">Alta</option></select>
+        </div>
+        <div class="export-field">
+          <label for="export-framerate" data-i18n="Quadros por segundo">Quadros por segundo</label>
+          <select id="export-framerate"><option value="24">24 fps</option><option value="30" selected>30 fps</option></select>
+        </div>
+      </div>
+      <div id="export-preview-wrap" class="export-preview-wrap"><div id="export-preview" class="export-preview" aria-label="Prévia do vídeo a exportar" data-i18n-aria-label="Prévia do vídeo a exportar"></div><span id="export-preview-caption" class="export-preview-caption">Vídeo vertical · 9:16</span></div>
+    </div>
+    <div class="export-estimate"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span id="export-estimate">Escolha os ajustes para estimar o tamanho do arquivo.</span></div>
+    <p id="export-note" class="export-note"></p>
+    <div id="export-progress" class="export-progress" hidden><label class="sr-only" for="export-progress-bar" data-i18n="Progresso da exportação">Progresso da exportação</label><progress id="export-progress-bar" value="0" max="100"></progress></div>
+    <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+    <div class="export-actions">
+      <button id="export-cancel-btn" class="secondary-button" type="button" hidden data-i18n="Cancelar exportação">Cancelar exportação</button>
+      <a id="export-save-link" class="secondary-button" hidden download data-i18n="Salvar arquivo">Salvar arquivo</a>
+      <button id="export-submit-btn" class="record-button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span>Exportar vídeo</span></button>
+    </div>
+  </dialog>
+  <dialog id="help-dialog" class="studio-dialog help-dialog" aria-labelledby="help-heading"><div class="dialog-heading"><div><span class="eyebrow" data-i18n="DO ROTEIRO AO VÍDEO">DO ROTEIRO AO VÍDEO</span><h2 id="help-heading" data-i18n="Encontre seu ritmo.">Encontre seu ritmo.</h2></div><button id="close-help-btn" class="icon-button" type="button" aria-label="Fechar ajuda" data-i18n-aria-label="Fechar ajuda"><svg class="icon"><use href="#i-close"/></svg></button></div><ol class="help-steps"><li><strong data-i18n="Prepare suas palavras">Prepare suas palavras</strong><p data-i18n="Escreva seu roteiro ou importe um arquivo .txt. Ajuste fonte, cor, tamanho e velocidade.">Escreva seu roteiro ou importe um arquivo .txt. Ajuste fonte, cor, tamanho e velocidade.</p></li><li><strong data-i18n="Abra espaço para a sua câmera">Abra espaço para a sua câmera</strong><p data-i18n="Ao abrir o estúdio, permita o acesso à câmera e ao microfone no navegador. Use o botão Ensaiar para testar a leitura.">Ao abrir o estúdio, permita o acesso à câmera e ao microfone no navegador. Use o botão Ensaiar para testar a leitura.</p></li><li><strong data-i18n="Respire e grave">Respire e grave</strong><p data-i18n="Ao iniciar, você tem 5 segundos para se preparar. Pause quando precisar e pare para concluir.">Ao iniciar, você tem 5 segundos para se preparar. Pause quando precisar e pare para concluir.</p></li><li><strong data-i18n="Guarde seu melhor take">Guarde seu melhor take</strong><p data-i18n="O vídeo final contém sua câmera e sua voz. Escolha formato, resolução e qualidade em Exportar antes de fechar ou recarregar a página.">O vídeo final contém sua câmera e sua voz. Escolha formato, resolução e qualidade em Exportar antes de fechar ou recarregar a página.</p></li></ol><div class="help-shortcuts"><span><kbd>R</kbd> <span data-i18n="Iniciar gravação">Iniciar gravação</span></span><span><kbd data-i18n="Espaço">Espaço</kbd> <span data-i18n="Pausar / retomar">Pausar / retomar</span></span><span><kbd>Esc</kbd> <span data-i18n="Parar / cancelar">Parar / cancelar</span></span></div><p class="help-browser-note" data-i18n="Use um navegador atualizado e acesse por localhost ou HTTPS. Seu roteiro e seus ajustes são salvos neste navegador.">Use um navegador atualizado e acesse por localhost ou HTTPS. Seu roteiro e seus ajustes são salvos neste navegador.</p></dialog>
+  <dialog id="logout-dialog" class="studio-dialog account-dialog" aria-labelledby="logout-heading" aria-describedby="logout-note">
+    <div class="dialog-heading"><h2 id="logout-heading" data-i18n="Sair da conta">Sair da conta</h2></div>
+    <p id="logout-note" class="dialog-intro" data-i18n="Você tem vídeos ainda não salvos. Exporte antes de sair ou confirme para descartá-los.">Você tem vídeos ainda não salvos. Exporte antes de sair ou confirme para descartá-los.</p>
+    <div class="account-dialog-actions">
+      <button id="logout-cancel-btn" class="account-return" type="button" data-i18n="Voltar ao estúdio">Voltar ao estúdio</button>
+      <button id="logout-confirm-btn" class="account-logout" type="button" data-i18n="Sair e descartar vídeos">Sair e descartar vídeos</button>
+    </div>
+  </dialog>
+  <noscript><div class="noscript-note" data-i18n="Ative o JavaScript no navegador para usar a câmera e o teleprompter.">Ative o JavaScript no navegador para usar a câmera e o teleprompter.</div></noscript>
+</body>
+</html>

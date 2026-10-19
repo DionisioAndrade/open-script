@@ -1,0 +1,23 @@
+    <fieldset class="signup-consent" aria-describedby="consent-help">
+      <legend data-i18n="Antes de criar sua conta">Antes de criar sua conta</legend>
+      <p id="consent-help" class="field-help" data-i18n="Leia os dois documentos e marque as confirmações para criar sua conta.">Leia os dois documentos e marque as confirmações para criar sua conta.</p>
+      <noscript><p class="field-help" data-i18n="Leia os documentos antes de preencher o cadastro.">Leia os documentos antes de preencher o cadastro.</p></noscript>
+      <div class="consent-document">
+        <a class="consent-read-link" id="read-terms-link" href="{% url 'accounts:terms' %}?return_to={{ legal_return_to|default:'signup' }}&amp;lang={{ language|default:'pt-BR'|urlencode }}{% if next %}&amp;next={{ next|urlencode }}{% endif %}" data-legal-kind="terms"><span data-i18n="Ler Termos de Uso">Ler Termos de Uso</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        <span class="consent-read-status" id="terms-read-status" data-i18n="{% if terms_read %}Leitura concluída{% else %}Leia para continuar{% endif %}">{% if terms_read %}Leitura concluída{% else %}Leia para continuar{% endif %}</span>
+        <label class="consent-checkbox" for="id_accept_terms">
+          <input type="checkbox" id="id_accept_terms" name="accept_terms" required data-legal-read="{{ terms_read|yesno:'true,false' }}"{% if not terms_read %} disabled{% elif form.accept_terms.value %} checked{% endif %}{% if form.accept_terms.errors %} aria-invalid="true" aria-describedby="id_accept_terms-errors"{% endif %}>
+          <span data-i18n="Li e aceito os Termos de Uso.">Li e aceito os Termos de Uso.</span>
+        </label>
+        {% if form.accept_terms.errors %}<ul class="field-errors" id="id_accept_terms-errors">{% for error in form.accept_terms.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      <div class="consent-document">
+        <a class="consent-read-link" id="read-privacy-link" href="{% url 'accounts:privacy' %}?return_to={{ legal_return_to|default:'signup' }}&amp;lang={{ language|default:'pt-BR'|urlencode }}{% if next %}&amp;next={{ next|urlencode }}{% endif %}" data-legal-kind="privacy"><span data-i18n="Ler Política de Privacidade">Ler Política de Privacidade</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        <span class="consent-read-status" id="privacy-read-status" data-i18n="{% if privacy_read %}Leitura concluída{% else %}Leia para continuar{% endif %}">{% if privacy_read %}Leitura concluída{% else %}Leia para continuar{% endif %}</span>
+        <label class="consent-checkbox" for="id_accept_privacy">
+          <input type="checkbox" id="id_accept_privacy" name="accept_privacy" required data-legal-read="{{ privacy_read|yesno:'true,false' }}"{% if not privacy_read %} disabled{% elif form.accept_privacy.value %} checked{% endif %}{% if form.accept_privacy.errors %} aria-invalid="true" aria-describedby="id_accept_privacy-errors"{% endif %}>
+          <span data-i18n="Li e aceito a Política de Privacidade.">Li e aceito a Política de Privacidade.</span>
+        </label>
+        {% if form.accept_privacy.errors %}<ul class="field-errors" id="id_accept_privacy-errors">{% for error in form.accept_privacy.errors %}<li data-i18n="{{ error }}">{{ error }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    </fieldset>

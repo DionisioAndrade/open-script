@@ -1,0 +1,25 @@
+{% extends 'accounts/base.html' %}
+
+{% block title_source %}{{ document.title }}{% endblock %}
+{% block title %}OpenScript — {{ document.title }}{% endblock %}
+{% block page_class %}legal-page{% endblock %}
+
+{% block main %}
+  <main class="legal-layout" data-public-legal-page="{{ document.kind }}" data-document-language="{{ language }}">
+    {% if user.is_authenticated %}<a class="legal-back" href="{% url 'studio:index' %}" data-i18n="Voltar ao estúdio">Voltar ao estúdio</a>{% else %}<a class="legal-back" href="{{ signup_return_url }}?lang={{ language|urlencode }}{% if next %}&amp;next={{ next|urlencode }}{% endif %}" data-i18n="Voltar ao cadastro">Voltar ao cadastro</a>{% endif %}
+    <article class="legal-page-card" aria-labelledby="legal-page-title">
+      <header class="legal-page-heading"><h1 id="legal-page-title">{{ document.title }}</h1></header>
+      <div class="legal-content">{% include 'accounts/legal_fragment.html' with heading_level='h2' %}</div>
+      {% if not user.is_authenticated %}<form class="legal-page-read" method="post" action="{{ legal_read_url }}">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="{{ document.kind }}">
+        <input type="hidden" name="version" value="{{ document.version }}">
+        <input type="hidden" name="return_to" value="{{ legal_return_to|default:'signup' }}">
+        <input type="hidden" name="lang" value="{{ language }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        <p class="field-help" data-i18n="A confirmação de leitura libera a opção de aceitar este documento no cadastro.">A confirmação de leitura libera a opção de aceitar este documento no cadastro.</p>
+        <button class="auth-submit" type="submit" data-i18n="Li este documento">Li este documento</button>
+      </form>{% endif %}
+    </article>
+  </main>
+{% endblock %}

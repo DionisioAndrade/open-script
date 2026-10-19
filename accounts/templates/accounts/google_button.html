@@ -1,0 +1,11 @@
+<div class="auth-divider"><span data-i18n="ou">ou</span></div>
+<form class="google-auth-form" data-auth-form method="post" action="{% url 'accounts:google_login' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <input type="hidden" name="lang" value="{{ language|default:'pt-BR' }}">
+  <button class="google-auth-button" id="google-signin-button" type="submit" data-submit-source="Continuar com Google"{% if not google_enabled %} disabled data-unavailable="true" aria-describedby="google-signin-note"{% endif %}>
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path fill="#4285F4" d="M19.6 10.23c0-.68-.06-1.37-.18-2.04H10v3.87h5.4a4.62 4.62 0 0 1-2 3.04v2.51h3.22c1.89-1.74 2.98-4.31 2.98-7.38Z"/><path fill="#34A853" d="M10 20c2.7 0 4.98-.89 6.64-2.39l-3.22-2.51c-.9.61-2.06.96-3.42.96a6 6 0 0 1-5.66-4.14H1.02v2.59A10 10 0 0 0 10 20Z"/><path fill="#FBBC05" d="M4.34 11.92a6 6 0 0 1 0-3.84V5.49H1.02a10 10 0 0 0 0 9.02l3.32-2.59Z"/><path fill="#EA4335" d="M10 3.94c1.46-.02 2.86.53 3.92 1.54l2.93-2.93A9.58 9.58 0 0 0 10 0a10 10 0 0 0-8.98 5.49l3.32 2.59A6 6 0 0 1 10 3.94Z"/></svg>
+    <span data-i18n="Continuar com Google">Continuar com Google</span>
+  </button>
+</form>
+{% if not google_enabled %}<p class="field-help google-signin-note" id="google-signin-note" data-i18n="A entrada com Google estará disponível em breve.">A entrada com Google estará disponível em breve.</p>{% endif %}

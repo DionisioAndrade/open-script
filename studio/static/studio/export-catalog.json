@@ -1,0 +1,250 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "custom",
+      "label": "Personalizado",
+      "note": "Ajuste livremente o formato, a proporção e a qualidade.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "instagram-reels",
+      "label": "Instagram · Reels",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "advice": "Os limites de publicação podem variar conforme sua conta e a versão do aplicativo.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "instagram-stories",
+      "label": "Instagram · Stories",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "advice": "Os limites de publicação podem variar conforme sua conta e a versão do aplicativo.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "instagram-feed",
+      "label": "Instagram · Feed",
+      "aspect": "4:5",
+      "note": "Formato 4:5 para ocupar mais espaço no feed.",
+      "advice": "Os limites de publicação podem variar conforme sua conta e a versão do aplicativo.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "tiktok",
+      "label": "TikTok",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "formats": [
+        "mp4",
+        "webm"
+      ],
+      "advice": "Os limites de publicação podem variar conforme sua conta e a versão do aplicativo."
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "youtube-shorts",
+      "label": "YouTube · Shorts",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "formats": [
+        "mp4",
+        "webm"
+      ],
+      "maxSeconds": 180,
+      "limitLabel": "3 minutos"
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "youtube-video",
+      "label": "YouTube · Vídeos",
+      "aspect": "16:9",
+      "note": "Formato horizontal para vídeos no YouTube.",
+      "formats": [
+        "mp4",
+        "webm"
+      ],
+      "adviceAboveSeconds": 900,
+      "advice": "Vídeos acima de 15 minutos no YouTube exigem uma conta verificada."
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "facebook-reels",
+      "label": "Facebook · Reels",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "facebook-feed",
+      "label": "Facebook · Feed",
+      "aspect": "4:5",
+      "note": "Formato 4:5 para ocupar mais espaço no feed.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "linkedin",
+      "label": "LinkedIn · Feed",
+      "aspect": "1:1",
+      "note": "Formato quadrado para o feed profissional.",
+      "maxSeconds": 900,
+      "limitLabel": "15 minutos",
+      "maxBytes": 5368709120,
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "x",
+      "label": "X",
+      "aspect": "16:9",
+      "note": "Formato horizontal para compartilhar no X.",
+      "maxSeconds": 140,
+      "limitLabel": "2 minutos e 20 segundos",
+      "maxBytes": 536870912,
+      "advice": "No X, os limites de duração e tamanho variam conforme a conta.",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 720,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "whatsapp-status",
+      "label": "WhatsApp · Status",
+      "aspect": "9:16",
+      "note": "Arquivo mais leve para compartilhar no Status.",
+      "maxSeconds": 90,
+      "limitLabel": "90 segundos",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "pinterest",
+      "label": "Pinterest",
+      "aspect": "9:16",
+      "note": "Formato vertical recomendado para Pins de vídeo.",
+      "maxSeconds": 300,
+      "limitLabel": "5 minutos",
+      "minSeconds": 4,
+      "minimumLabel": "4 segundos",
+      "formats": [
+        "mp4"
+      ]
+    },
+    {
+      "resolution": 1080,
+      "quality": "balanced",
+      "frameRate": 30,
+      "id": "kwai",
+      "label": "Kwai",
+      "aspect": "9:16",
+      "note": "Formato vertical para assistir no celular.",
+      "advice": "Os limites de publicação podem variar conforme sua conta e a versão do aplicativo.",
+      "formats": [
+        "mp4"
+      ]
+    }
+  ],
+  "ratios": {
+    "9:16": [
+      9,
+      16
+    ],
+    "4:5": [
+      4,
+      5
+    ],
+    "1:1": [
+      1,
+      1
+    ],
+    "16:9": [
+      16,
+      9
+    ],
+    "2:3": [
+      2,
+      3
+    ]
+  },
+  "resolutions": [
+    360,
+    720,
+    1080
+  ],
+  "frameRates": [
+    24,
+    30
+  ],
+  "bitrates": {
+    "360": {
+      "compact": 600000,
+      "balanced": 1200000,
+      "high": 2000000
+    },
+    "720": {
+      "compact": 2000000,
+      "balanced": 4000000,
+      "high": 6000000
+    },
+    "1080": {
+      "compact": 4000000,
+      "balanced": 8000000,
+      "high": 10000000
+    }
+  },
+  "audioBitrates": {
+    "compact": 64000,
+    "balanced": 128000,
+    "high": 192000
+  }
+}
