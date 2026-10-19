@@ -68,7 +68,6 @@ private enum class AccountMode { LOGIN, SIGNUP, RESET }
 @Composable
 fun AccountPage(state: StudioState, model: StudioViewModel) {
     val enabled = !state.busy && !state.loading
-    var origin by remember(state.origin) { mutableStateOf(state.origin) }
     var mode by remember(state.session?.user?.id, state.requiresLogin) { mutableStateOf(AccountMode.LOGIN) }
     var name by remember { mutableStateOf("") }
     var email by remember(state.session?.user?.id) { mutableStateOf(state.session?.user?.email.orEmpty()) }
@@ -77,8 +76,7 @@ fun AccountPage(state: StudioState, model: StudioViewModel) {
     var confirmation by remember { mutableStateOf("") }
     var acceptTerms by remember(state.terms?.receipt) { mutableStateOf(false) }
     var acceptPrivacy by remember(state.privacy?.receipt) { mutableStateOf(false) }
-    val changedOrigin = origin.trim().trimEnd('/') != state.origin.trimEnd('/')
-    val canConnect = state.origin.isNotBlank() && !changedOrigin
+    val canConnect = state.origin.isNotBlank()
     val signedIn = state.session != null && !state.requiresLogin
     val changeMode: (AccountMode) -> Unit = { next ->
         mode = next
@@ -104,38 +102,9 @@ fun AccountPage(state: StudioState, model: StudioViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Sua conta", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Entre para guardar roteiros e ajustes no servidor. A câmera e seus vídeos continuam no aparelho.",
+                "Entre para guardar seu roteiro e ajustes na conta. A câmera e seus vídeos continuam no aparelho.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-
-        AccountSection {
-            Text("Servidor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            OutlinedTextField(
-                value = origin, onValueChange = { origin = it }, enabled = enabled,
-                modifier = Modifier.fillMaxWidth(), label = { Text("Origem do servidor") }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                supportingText = { Text("Use HTTPS e informe apenas o domínio, sem /api/v1.") },
-            )
-            if (BuildConfig.DEBUG) {
-                Text(
-                    "No emulador Android, o servidor local usa http://10.0.2.2:8000.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                "Alterar o servidor encerra o acesso neste aparelho e abre a área de visitante. As bibliotecas locais continuam separadas por conta.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedButton(
-                onClick = { model.setOrigin(origin) }, enabled = enabled && origin.isNotBlank() && changedOrigin,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Aplicar servidor") }
-            if (changedOrigin) {
-                Text("Aplique o servidor antes de acessar sua conta.", style = MaterialTheme.typography.bodySmall)
-            } else if (state.origin.isNotBlank()) {
-                Text("Servidor configurado", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
         }
 
         if (state.busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -172,7 +141,7 @@ fun AccountPage(state: StudioState, model: StudioViewModel) {
                 AccountSection {
                     Text("Entre novamente", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        "Seu acesso precisa ser renovado. Os roteiros e takes desta conta continuam salvos no aparelho.",
+                        "Seu acesso precisa ser renovado. O roteiro e os takes desta conta continuam salvos no aparelho.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     state.session?.user?.email?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
@@ -280,7 +249,7 @@ fun AccountPage(state: StudioState, model: StudioViewModel) {
                     TextButton(onClick = { changeMode(AccountMode.LOGIN) }, enabled = enabled) { Text("Voltar para entrar") }
                 }
                 if (!canConnect) {
-                    Text("Configure e aplique o servidor acima para continuar.", style = MaterialTheme.typography.bodySmall)
+                    Text("O acesso à conta está indisponível nesta versão do aplicativo.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

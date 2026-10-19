@@ -1,16 +1,29 @@
 package com.example.open_script.media
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.Metadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Clock
+import androidx.media3.common.util.CodecSpecificDataUtil
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.FrameDropEffect
 import androidx.media3.effect.Presentation
+import androidx.media3.muxer.BufferInfo
+import androidx.media3.muxer.FileOutputStreamSeekableMuxerOutput
+import androidx.media3.muxer.Muxer
+import androidx.media3.muxer.MuxerException
+import androidx.media3.muxer.WebmMuxer
 import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
@@ -25,7 +38,11 @@ import androidx.media3.transformer.TransformationRequest
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.VideoEncoderSettings
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.nio.ByteBuffer
 import java.util.UUID
+import com.google.common.collect.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +63,7 @@ data class ExportState(
     val notice: String? = null,
 )
 
-/** Exports a new private MP4. Input takes are never modified or deleted. */
+/** Exports a new private video. Input takes are never modified or deleted. */
 @UnstableApi
 class NativeExporter(context: Context) {
     private val appContext = context.applicationContext
@@ -77,22 +94,29 @@ class NativeExporter(context: Context) {
             try {
                 val source = withContext(Dispatchers.IO) {
                     removeExpiredExports(protectedPaths)
-                    sourceDimensions(input)
+                    sourceInfo(input).also { ensureEncoders(ExportProfiles.format(profile.format), it.hasAudio) }
                 }
                 if (operation != generation) return@launch
-                val settings = ExportProfiles.settings(profile, source.width, source.height)
+                val settings = ExportProfiles.settings(profile, source.dimensions.width, source.dimensions.height, source.frameRate)
                 val directory = File(appContext.cacheDir, "exports")
                 check(directory.isDirectory || directory.mkdirs()) { "Não foi possível preparar a exportação." }
-                val output = File(directory, "openscript-${UUID.randomUUID()}.mp4")
+                val output = File(directory, "openscript-${UUID.randomUUID()}.${settings.format.extension}")
                 activeOutput = output
-                val notice = if (settings.limitedBySource) {
-                    "O original tem ${source.width}×${source.height}. A exportação usará " +
-                        "${settings.dimensions.width}×${settings.dimensions.height} para não ampliar a imagem."
-                } else null
+                val notice = buildList {
+                    if (settings.limitedBySource) add(
+                        "O original tem ${source.dimensions.width}×${source.dimensions.height}. A exportação usará " +
+                            "${settings.dimensions.width}×${settings.dimensions.height} para não ampliar a imagem.",
+                    )
+                    if (settings.frameRateLimitedBySource) add(
+                        "O original tem menos quadros por segundo. A exportação preservará esse limite, sem criar quadros.",
+                    )
+                }.joinToString(" ").takeIf(String::isNotBlank)
                 mutableState.value = mutableState.value.copy(notice = notice)
                 startTransformer(operation, input, output, settings)
             } catch (_: CancellationException) {
                 // cancel()/clear() perform cleanup and deliver the completion callback.
+            } catch (failure: UnsupportedExportFormatException) {
+                finish(operation, error = failure.message)
             } catch (_: Exception) {
                 finish(operation, error = "Não foi possível exportar este vídeo. O original foi mantido.")
             } finally {
@@ -112,7 +136,11 @@ class NativeExporter(context: Context) {
         callback?.invoke(null)
     }
 
-    private fun sourceDimensions(input: File): ExportDimensions {
+    private data class SourceVideo(val dimensions: ExportDimensions, val frameRate: Float?, val hasAudio: Boolean)
+
+    private class UnsupportedExportFormatException(message: String) : IllegalStateException(message)
+
+    private fun sourceInfo(input: File): SourceVideo {
         require(input.isFile && input.canRead() && input.length() > 0) { "O vídeo original não está disponível." }
         val reader = MediaMetadataRetriever()
         try {
@@ -121,9 +149,40 @@ class NativeExporter(context: Context) {
             val height = reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
             val rotation = reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
             require(width >= 2 && height >= 2) { "O arquivo não contém um vídeo válido." }
-            return if (rotation == 90 || rotation == 270) ExportDimensions(height, width) else ExportDimensions(width, height)
+            val dimensions = if (rotation == 90 || rotation == 270) ExportDimensions(height, width) else ExportDimensions(width, height)
+            val extractor = MediaExtractor()
+            try {
+                extractor.setDataSource(input.absolutePath)
+                var frameRate: Float? = null
+                var hasAudio = false
+                for (index in 0 until extractor.trackCount) {
+                    val format = extractor.getTrackFormat(index)
+                    val mimeType = format.getString(MediaFormat.KEY_MIME).orEmpty()
+                    if (mimeType.startsWith("audio/")) hasAudio = true
+                    if (mimeType.startsWith("video/") && format.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                        frameRate = runCatching { format.getFloat(MediaFormat.KEY_FRAME_RATE) }.getOrNull()
+                            ?: runCatching { format.getInteger(MediaFormat.KEY_FRAME_RATE).toFloat() }.getOrNull()
+                    }
+                }
+                return SourceVideo(dimensions, frameRate, hasAudio)
+            } finally {
+                extractor.release()
+            }
         } finally {
             reader.release()
+        }
+    }
+
+    private fun ensureEncoders(format: ExportFormat, hasAudio: Boolean) {
+        val encoders = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filter { it.isEncoder }
+        fun supports(mimeType: String): Boolean = encoders.any { encoder ->
+            encoder.supportedTypes.any { it.equals(mimeType, ignoreCase = true) }
+        }
+        if (!supports(format.videoMimeType) || (hasAudio && !supports(format.audioMimeType))) {
+            throw UnsupportedExportFormatException(
+                "Este aparelho não oferece os codificadores necessários para ${format.label}. " +
+                    (if (format.id == "webm") "Escolha MP4. " else "") + "O original foi mantido.",
+            )
         }
     }
 
@@ -145,7 +204,11 @@ class NativeExporter(context: Context) {
         val listener = object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 if (!isCurrentAttempt(operation, output)) return
-                if (output.isFile && output.length() > 0) {
+                if (exportResult.videoMimeType != settings.format.videoMimeType ||
+                    !settings.format.acceptsCodecs(exportResult.videoMimeType, exportResult.audioMimeType)
+                ) {
+                    finish(operation, error = "O aparelho não concluiu a codificação em ${settings.format.label}. O original foi mantido.")
+                } else if (output.isFile && output.length() > 0) {
                     finish(operation, output = output)
                 } else {
                     finish(operation, error = "A exportação não gerou um arquivo válido. O original foi mantido.")
@@ -154,6 +217,12 @@ class NativeExporter(context: Context) {
 
             override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
                 if (!isCurrentAttempt(operation, output)) return
+                Log.w(
+                    "NativeExporter",
+                    "Export failed: format=${settings.format.id}, code=${exportException.errorCode}, " +
+                        "softwareDecoding=$softwareDecoding",
+                    exportException,
+                )
                 val decoderFailure = exportException.errorCode == ExportException.ERROR_CODE_DECODING_FAILED ||
                     exportException.errorCode == ExportException.ERROR_CODE_DECODER_INIT_FAILED
                 if (!softwareDecoding && decoderFailure) {
@@ -169,13 +238,11 @@ class NativeExporter(context: Context) {
                 fallbackTransformationRequest: TransformationRequest,
             ) {
                 if (!isCurrentAttempt(operation, output)) return
-                // A device may lower resolution, but an MP4 requested as H.264/AAC must stay compatible.
+                // Resolution can adapt, but a chosen container must keep its requested codecs.
                 val video = fallbackTransformationRequest.videoMimeType
                 val audio = fallbackTransformationRequest.audioMimeType
-                if ((video != null && video != MimeTypes.VIDEO_H264) ||
-                    (audio != null && audio != MimeTypes.AUDIO_AAC)
-                ) {
-                    finish(operation, error = "O aparelho não oferece esta exportação em MP4 H.264/AAC. O original foi mantido.")
+                if (!settings.format.acceptsCodecs(video, audio)) {
+                    finish(operation, error = "O aparelho não oferece esta codificação em ${settings.format.label}. O original foi mantido.")
                 } else {
                     val adjustment = "O aparelho ajustou a resolução para um formato de codificação compatível."
                     mutableState.value = mutableState.value.copy(
@@ -186,10 +253,14 @@ class NativeExporter(context: Context) {
         }
         val builder = Transformer.Builder(appContext)
             .setLooper(Looper.getMainLooper())
-            .setVideoMimeType(MimeTypes.VIDEO_H264)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
+            .setVideoMimeType(settings.format.videoMimeType)
+            .setAudioMimeType(settings.format.audioMimeType)
             .setEncoderFactory(encoderFactory)
             .addListener(listener)
+        if (settings.format.id == "webm") {
+            // WebM has no MP4 rotation hint: encode pixels in their intended orientation.
+            builder.setPortraitEncodingEnabled(true).setMuxerFactory(WebmExportMuxerFactory())
+        }
         if (softwareDecoding) {
             val decoderFactory = DefaultDecoderFactory.Builder(appContext)
                 .setMediaCodecSelector(SoftwareDecoders.selector)
@@ -239,7 +310,7 @@ class NativeExporter(context: Context) {
         main.post {
             if (operation != generation || completion == null) return@post
             try {
-                val output = File(appContext.cacheDir, "exports/openscript-${UUID.randomUUID()}.mp4")
+                val output = File(appContext.cacheDir, "exports/openscript-${UUID.randomUUID()}.${settings.format.extension}")
                 activeOutput = output
                 startTransformer(operation, input, output, settings, softwareDecoding = true)
             } catch (_: Exception) {
@@ -319,7 +390,7 @@ class NativeExporter(context: Context) {
 
     private fun removeExpiredExports(protectedPaths: Set<String>) {
         val cutoff = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-        val ownName = Regex("openscript-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\.mp4")
+        val ownName = Regex("openscript-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\.(mp4|webm)")
         File(appContext.cacheDir, "exports").listFiles()?.forEach { file ->
             if (file.isFile && ownName.matches(file.name) && file.lastModified() in 1L..cutoff &&
                 fileIdentity(file) !in protectedPaths
@@ -329,4 +400,65 @@ class NativeExporter(context: Context) {
 
     private fun fileIdentity(file: File): String = runCatching { file.canonicalPath }
         .getOrElse { file.absoluteFile.normalize().path }
+}
+
+/** Media3's WebM muxer, constrained to the same codecs advertised by the export picker. */
+@UnstableApi
+private class WebmExportMuxerFactory : Muxer.Factory {
+    override fun getSupportedSampleMimeTypes(trackType: Int): ImmutableList<String> = when (trackType) {
+        C.TRACK_TYPE_VIDEO -> ImmutableList.of(MimeTypes.VIDEO_VP8)
+        C.TRACK_TYPE_AUDIO -> ImmutableList.of(MimeTypes.AUDIO_OPUS)
+        else -> ImmutableList.of()
+    }
+
+    override fun create(path: String): Muxer {
+        val stream = try {
+            FileOutputStream(path)
+        } catch (failure: IOException) {
+            throw MuxerException("Não foi possível abrir o arquivo WebM.", failure)
+        }
+        val delegate = try {
+            WebmMuxer.Builder(FileOutputStreamSeekableMuxerOutput(stream)).build()
+        } catch (failure: RuntimeException) {
+            runCatching { stream.close() }
+            throw failure
+        }
+        return object : Muxer {
+            override fun addTrack(format: Format): Int {
+                require(format.rotationDegrees == 0) { "WebM precisa da orientação aplicada aos quadros." }
+                // The WebM writer requires a language for every track, including video.
+                // Encoder output usually omits it; Matroska's 'und' means undetermined.
+                val webmFormat = format.buildUpon().apply {
+                    if (format.language.isNullOrBlank()) setLanguage("und")
+                    if (format.sampleMimeType == MimeTypes.AUDIO_OPUS) {
+                        // Android encoders can wrap OpusHead in AOPUSHDR/AOPUSDLY/AOPUSPRL.
+                        // WebM CodecPrivate requires the raw RFC 7845 identification header.
+                        setInitializationData(listOf(CodecSpecificDataUtil.getOpusInitializationData(format)))
+                        // Opus packet timestamps always use 48 kHz, even for an 8 kHz source.
+                        setSampleRate(48_000)
+                        // Opus has no PCM sample depth. This muxer writes pcmEncoding into
+                        // BitDepth; NO_VALUE (-1) becomes a huge invalid unsigned depth.
+                        setPcmEncoding(C.ENCODING_INVALID)
+                    }
+                }.build()
+                return delegate.addTrack(webmFormat)
+            }
+
+            override fun writeSampleData(trackId: Int, byteBuffer: ByteBuffer, bufferInfo: BufferInfo) =
+                delegate.writeSampleData(trackId, byteBuffer, bufferInfo)
+
+            override fun addMetadataEntry(metadataEntry: Metadata.Entry) {
+                // MP4 location/timestamp entries have no equivalent in this WebM muxer.
+                // Pixel orientation is already applied above; track color/audio data stays intact.
+            }
+
+            override fun close() {
+                try {
+                    delegate.close()
+                } finally {
+                    stream.close()
+                }
+            }
+        }
+    }
 }

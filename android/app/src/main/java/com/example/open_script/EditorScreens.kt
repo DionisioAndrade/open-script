@@ -28,18 +28,63 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun ScriptEditor(draft: ScriptDocument, onChange: (String, String) -> Unit, onSave: () -> Unit, onClose: () -> Unit,
-    onRecord: () -> Unit, onUpload: (() -> Unit)?, busy: Boolean) {
+internal fun ScriptEditor(
+    draft: ScriptDocument,
+    onChange: (String) -> Unit,
+    onRecord: () -> Unit,
+    onUpload: (() -> Unit)?,
+    busy: Boolean,
+    onClose: () -> Unit,
+) {
+    var importing by remember { mutableStateOf(false) }
+    Dialog(
+        onDismissRequest = { if (!busy && !importing) onClose() },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Surface(color = Color(0xFF0F172A), modifier = Modifier.fillMaxSize()) {
+            ScriptForm(draft, onChange, onRecord, onUpload, busy,
+                modifier = Modifier.safeDrawingPadding(), onClose = onClose, onImportingChanged = { importing = it })
+        }
+    }
+}
+
+@Composable
+internal fun ScriptPage(
+    draft: ScriptDocument,
+    onChange: (String) -> Unit,
+    onRecord: () -> Unit,
+    onUpload: (() -> Unit)?,
+    busy: Boolean,
+) {
+    // The surrounding Scaffold already applies the safe drawing insets to this page.
+    ScriptForm(draft, onChange, onRecord, onUpload, busy)
+}
+
+@Composable
+private fun ScriptForm(
+    draft: ScriptDocument,
+    onChange: (String) -> Unit,
+    onRecord: () -> Unit,
+    onUpload: (() -> Unit)?,
+    busy: Boolean,
+    modifier: Modifier = Modifier,
+    onClose: (() -> Unit)? = null,
+    onImportingChanged: (Boolean) -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val formScroll = rememberScrollState()
     var importError by remember { mutableStateOf<String?>(null) }
     var importing by remember { mutableStateOf(false) }
     val active = busy || importing
-    val currentDraft by rememberUpdatedState(draft)
+    val currentOnChange by rememberUpdatedState(onChange)
+    val currentImportingChanged by rememberUpdatedState(onImportingChanged)
+    val contentBytes = remember(draft.content) { draft.content.toByteArray(Charsets.UTF_8).size }
+    val wordCount = remember(draft.content) { draft.content.trim().split(Regex("\\s+")).count { it.isNotEmpty() } }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             importing = true
+            currentImportingChanged(true)
             try {
                 val text = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri).use { input ->
@@ -55,59 +100,50 @@ internal fun ScriptEditor(draft: ScriptDocument, onChange: (String, String) -> U
                         output.toByteArray().decodeToString(throwOnInvalidSequence = true).removePrefix("\uFEFF")
                     }
                 }
-                onChange(currentDraft.title, text)
+                currentOnChange(text)
                 importError = null
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) { importError = error.message ?: "Use um arquivo .txt em UTF-8." }
-            finally { importing = false }
+            finally { importing = false; currentImportingChanged(false) }
         }
     }
-    Dialog(onDismissRequest = { if (!active) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Surface(color = Color(0xFF0F172A), modifier = Modifier.fillMaxSize()) {
-            BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-                val keyboard = LocalSoftwareKeyboardController.current
-                val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-                // The available height also shrinks with the IME, not only on rotation.
-                val compact = maxHeight < 480.dp
-                Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 16.dp else 20.dp, vertical = if (compact) 6.dp else 20.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Seu roteiro", fontSize = if (compact) 21.sp else 26.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        if (keyboardVisible) TextButton(onClick = { keyboard?.hide() }) { Text("Ocultar teclado", fontSize = 12.sp) }
-                        TextButton(onClick = onClose, enabled = !active) { Text("Fechar") }
-                    }
-                    Column(
-                        Modifier.weight(1f).fillMaxWidth().then(if (compact) Modifier.verticalScroll(formScroll) else Modifier),
-                    ) {
-                        if (!compact) {
-                            Text("Prepare as palavras. A conversa continua sendo sua.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                            Spacer(Modifier.height(18.dp))
-                        }
-                        OutlinedTextField(value = draft.title, onValueChange = { if (it.length <= 100) onChange(it, draft.content) },
-                            label = { Text("Título") }, singleLine = true, enabled = !active, modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
-                        OutlinedTextField(value = draft.content, onValueChange = {
-                            if (it.toByteArray(Charsets.UTF_8).size <= 102400) { onChange(draft.title, it); importError = null }
-                            else importError = "Use até 100 KiB no roteiro. Seu texto anterior foi mantido."
-                        }, label = { Text("Roteiro") }, placeholder = { Text("Cole seu texto ou comece a escrever…") },
-                            enabled = !active,
-                            modifier = Modifier.fillMaxWidth().then(if (compact) Modifier.heightIn(min = 140.dp, max = 240.dp) else Modifier.weight(1f)),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 27.sp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { importer.launch(arrayOf("text/plain")) }, enabled = !active) { Text(if (importing) "Importando…" else "Importar .txt") }
-                            Text("${draft.content.trim().split(Regex("\\s+")).count { it.isNotEmpty() }} palavras · ${draft.content.toByteArray(Charsets.UTF_8).size / 1024} / 100 KiB",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                        }
-                        importError?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlinedButton(onClick = onSave, enabled = !active, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Salvar roteiro") }
-                            Button(onClick = onRecord, enabled = !active, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Ir para câmera") }
-                        }
-                        if (onUpload != null) TextButton(onClick = onUpload, enabled = !active, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (busy) "Enviando…" else "Enviar roteiro à conta")
-                        }
-                        Text("O rascunho é salvo automaticamente neste aparelho.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp, bottom = if (compact) 12.dp else 0.dp))
-                    }
+    BoxWithConstraints(modifier.fillMaxSize().imePadding()) {
+        val keyboard = LocalSoftwareKeyboardController.current
+        val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        // The available height also shrinks with the IME, not only on rotation.
+        val compact = maxHeight < 480.dp
+        Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 16.dp else 20.dp, vertical = if (compact) 6.dp else 20.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Roteiro", fontSize = if (compact) 21.sp else 26.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                if (keyboardVisible) TextButton(onClick = { keyboard?.hide() }) { Text("Ocultar teclado", fontSize = 12.sp) }
+                if (onClose != null) TextButton(onClick = onClose, enabled = !active) { Text("Fechar") }
+            }
+            Column(
+                Modifier.weight(1f).fillMaxWidth().then(if (compact) Modifier.verticalScroll(formScroll) else Modifier),
+            ) {
+                if (!compact) {
+                    Text("Prepare as palavras. A conversa continua sendo sua.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Spacer(Modifier.height(18.dp))
                 }
+                OutlinedTextField(value = draft.content, onValueChange = { text ->
+                    if (text.toByteArray(Charsets.UTF_8).size <= 102400) { currentOnChange(text); importError = null }
+                    else importError = "Use até 100 KiB no roteiro. Seu texto anterior foi mantido."
+                }, label = { Text("Roteiro") }, placeholder = { Text("Cole seu texto ou comece a escrever…") },
+                    enabled = !active,
+                    modifier = Modifier.fillMaxWidth().then(if (compact) Modifier.heightIn(min = 140.dp, max = 240.dp) else Modifier.weight(1f)),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 27.sp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { importer.launch(arrayOf("text/plain")) }, enabled = !active) { Text(if (importing) "Importando…" else "Importar .txt") }
+                    Text("$wordCount palavras · ${contentBytes / 1024} / 100 KiB",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                }
+                importError?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                Button(onClick = onRecord, enabled = !active, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Usar na câmera") }
+                if (onUpload != null) TextButton(onClick = onUpload, enabled = !active, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (busy) "Enviando…" else "Enviar roteiro à conta")
+                }
+                Text("Alterações salvas automaticamente neste aparelho.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = if (compact) 12.dp else 0.dp))
             }
         }
     }

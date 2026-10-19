@@ -1,80 +1,74 @@
 package com.example.open_script
 
-import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.open_script.data.RecordedTake
 import com.example.open_script.data.ScriptDocument
-import java.io.File
+import com.example.open_script.ui.theme.Open_scriptTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
 
 private val LibraryNavy = Color(0xFF0F172A)
 private val LibraryPanel = Color(0xFF162036)
@@ -84,206 +78,131 @@ private val LibraryRule = Color(0xFF29364E)
 private val LibraryRed = Color(0xFFF34D4D)
 
 @Composable
-fun ScriptsPage(
-    state: StudioState,
-    onNew: () -> Unit,
-    onOpen: (ScriptDocument) -> Unit,
-    onDelete: (ScriptDocument) -> Unit,
-    onCloud: () -> Unit,
-) {
-    var deletingId by rememberSaveable(state.ownerId) { mutableStateOf<String?>(null) }
-    val draft = state.library.draft
-    val deleting = (listOf(draft) + state.library.scripts).firstOrNull { it.id == deletingId }
-    val compact = compactLibraryHeight()
-    val saved = remember(state.library.scripts, draft.id) {
-        state.library.scripts.filterNot { it.id == draft.id }.sortedByDescending { it.updatedAt }
-    }
-    val draftIsSaved = state.library.scripts.any { it.id == draft.id }
-    val canUseCloud = state.session != null && !state.requiresLogin
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(LibraryNavy),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = if (compact) 12.dp else 24.dp),
-        verticalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp),
-    ) {
-        item(key = "scripts-heading") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Roteiros", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = LibraryText)
-                    Text("Seu texto, pronto para gravar.", style = MaterialTheme.typography.bodyMedium, color = LibraryMuted,
-                        modifier = Modifier.padding(top = 6.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Button(onClick = onNew, modifier = Modifier.heightIn(min = 48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = LibraryRed, contentColor = Color.White)) {
-                    Text("Novo")
-                }
-            }
-        }
-        item(key = "current-draft") {
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(14.dp)).background(LibraryPanel)) {
-                Box(Modifier.width(3.dp).fillMaxHeight().background(LibraryRed))
-                Column(Modifier.weight(1f).padding(18.dp)) {
-                    Text("EM EDIÇÃO", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = LibraryRed)
-                    Text(draft.title.ifBlank { "Sem título" }, style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold, color = LibraryText, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 8.dp))
-                    Text(scriptSnippet(draft), color = LibraryMuted, style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                    Text("${if (draftIsSaved) "Salvo neste aparelho" else "Rascunho local"} · ${libraryDate(draft.updatedAt)}",
-                        color = LibraryMuted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 12.dp))
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { onOpen(draft) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(if (draft.content.isBlank()) "Abrir editor" else "Continuar edição", color = LibraryText)
-                        }
-                        Spacer(Modifier.weight(1f))
-                        if (draft.content.isNotBlank() || draftIsSaved) {
-                            TextButton(onClick = { deletingId = draft.id }, modifier = Modifier.heightIn(min = 48.dp)) {
-                                Text("Excluir", color = LibraryMuted)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        item(key = "cloud-action") {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onCloud, enabled = canUseCloud && !state.busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    if (state.busy && canUseCloud) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = LibraryMuted)
-                        Spacer(Modifier.width(10.dp))
-                    }
-                    Text("Buscar na conta")
-                }
-                Text(if (canUseCloud) "Abra uma cópia dos roteiros salvos na sua conta."
-                    else "Entre na aba Conta para buscar seus roteiros. Os arquivos deste aparelho continuam disponíveis.",
-                    style = MaterialTheme.typography.bodySmall, color = LibraryMuted)
-            }
-        }
-        item(key = "saved-heading") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Salvos neste aparelho", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                    color = LibraryText, modifier = Modifier.weight(1f))
-                Text(saved.size.toString(), style = MaterialTheme.typography.labelLarge, fontFamily = FontFamily.Monospace,
-                    color = LibraryMuted)
-            }
-        }
-        if (saved.isEmpty()) {
-            item(key = "empty-scripts") {
-                LibraryEmptyState(
-                    title = if (draftIsSaved) "Seu roteiro salvo está em edição." else "Sua biblioteca começa com um roteiro.",
-                    detail = if (draftIsSaved) "Use Continuar edição para abri-lo. Novos roteiros salvos aparecerão nesta lista."
-                    else "Escreva no editor e salve para voltar ao texto quando quiser gravar.",
-                )
-            }
-        } else {
-            items(saved, key = { "saved-${it.id}" }) { script ->
-                Column {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                        DocumentMark(Modifier.padding(top = 4.dp).size(24.dp))
-                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                            Text(script.title.ifBlank { "Sem título" }, style = MaterialTheme.typography.titleMedium,
-                                color = LibraryText, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(scriptSnippet(script), color = LibraryMuted, style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-                            Text("Editado em ${libraryDate(script.updatedAt)}", color = LibraryMuted,
-                                style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 10.dp))
-                            Row(Modifier.fillMaxWidth()) {
-                                TextButton(onClick = { onOpen(script) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text("Abrir roteiro", color = LibraryText)
-                                }
-                                Spacer(Modifier.weight(1f))
-                                TextButton(onClick = { deletingId = script.id }, modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text("Excluir", color = LibraryMuted)
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider(color = LibraryRule, modifier = Modifier.padding(top = 8.dp))
-                }
-            }
-        }
-    }
-
-    deleting?.let { script ->
-        AlertDialog(
-            onDismissRequest = { deletingId = null },
-            title = { Text("Excluir cópia local?") },
-            text = { Text("“${script.title.ifBlank { "Sem título" }}” será excluído deste aparelho. Se o roteiro estiver salvo na conta, continuará disponível lá.") },
-            confirmButton = {
-                TextButton(onClick = { deletingId = null; onDelete(script) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("Excluir cópia", color = LibraryRed)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deletingId = null }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Cancelar") }
-            },
-        )
-    }
-}
-
-@Composable
 fun TakesPage(
     takes: List<RecordedTake>,
     onPlay: (RecordedTake) -> Unit,
     onExport: (RecordedTake) -> Unit,
     onShare: (RecordedTake) -> Unit,
     onDelete: (RecordedTake) -> Unit,
+    onOpenStudio: () -> Unit,
+    onRename: (RecordedTake) -> Unit = {},
 ) {
     val sorted = remember(takes) { takes.sortedByDescending { it.createdAt } }
     val compact = compactLibraryHeight()
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 280.dp),
         modifier = Modifier.fillMaxSize().background(LibraryNavy),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = if (compact) 12.dp else 24.dp),
-        verticalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = if (compact) 12.dp else 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item(key = "takes-heading") {
-            Column {
-                Text("Takes", style = MaterialTheme.typography.headlineLarge, color = LibraryText, fontWeight = FontWeight.Bold)
-                Text(if (takes.size == 1) "1 vídeo salvo neste aparelho" else "${takes.size} vídeos salvos neste aparelho",
-                    style = MaterialTheme.typography.bodyMedium, color = LibraryMuted, modifier = Modifier.padding(top = 6.dp))
+        item(key = "takes-heading", span = { GridItemSpan(maxLineSpan) }) {
+            Column(Modifier.padding(bottom = if (compact) 0.dp else 8.dp)) {
+                Text("SUAS GRAVAÇÕES", color = LibraryMuted, fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold, letterSpacing = 1.6.sp)
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Takes", Modifier.weight(1f), fontSize = 34.sp, lineHeight = 40.sp,
+                        letterSpacing = (-1).sp, color = LibraryText, fontWeight = FontWeight.SemiBold)
+                    if (takes.isNotEmpty()) Surface(shape = RoundedCornerShape(12.dp), color = LibraryPanel,
+                        border = BorderStroke(1.dp, LibraryRule)) {
+                        Text(if (takes.size == 1) "1 vídeo" else "${takes.size} vídeos", color = LibraryMuted,
+                            fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
+                    }
+                }
+                Text("Salvos neste aparelho", color = LibraryMuted, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
         if (takes.isEmpty()) {
-            item(key = "empty-takes") {
-                Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    PlayMark(Modifier.size(52.dp), color = LibraryRed)
-                    Text("Seu primeiro take começa no estúdio.", style = MaterialTheme.typography.titleLarge,
-                        color = LibraryText, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 24.dp))
-                    Text("Abra o Estúdio, prepare seu roteiro e grave. Os vídeos ficam disponíveis aqui para revisar, exportar e compartilhar.",
-                        style = MaterialTheme.typography.bodyMedium, color = LibraryMuted, modifier = Modifier.padding(top = 12.dp))
-                }
+            item(key = "empty-takes", span = { GridItemSpan(maxLineSpan) }) {
+                EmptyTakes(onOpenStudio, compact)
             }
         } else {
+            item(key = "takes-order", span = { GridItemSpan(maxLineSpan) }) {
+                Text("Mais recentes", color = LibraryMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
             items(sorted, key = { it.id }) { take ->
-                BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val wide = maxWidth >= 640.dp
-                    Column {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                            TakeThumbnail(take, Modifier.width(104.dp).aspectRatio(3f / 4f).clip(RoundedCornerShape(10.dp))
-                                .clickable(onClickLabel = "Revisar ${take.title}") { onPlay(take) })
-                            Column(Modifier.weight(1f).padding(top = 2.dp)) {
-                                Text(take.title.ifBlank { "Sem título" }, color = LibraryText, style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(libraryDate(take.createdAt), color = LibraryMuted, style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(top = 10.dp))
-                                Text("${take.width} × ${take.height}", color = LibraryMuted, fontFamily = FontFamily.Monospace,
-                                    style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 10.dp))
-                                Text("Original · MP4", color = LibraryMuted, style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(top = 4.dp))
-                            }
-                            if (wide) {
-                                TakeActions(take, onPlay, onExport, onShare, onDelete, Modifier.width(248.dp))
-                            }
-                        }
-                        if (!wide) {
-                            TakeActions(take, onPlay, onExport, onShare, onDelete, Modifier.fillMaxWidth().padding(top = 12.dp))
-                        }
-                        HorizontalDivider(color = LibraryRule, modifier = Modifier.padding(top = 12.dp))
+                TakeCard(take, onPlay, onExport, onShare, onDelete, onRename)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TakeCard(
+    take: RecordedTake, onPlay: (RecordedTake) -> Unit, onExport: (RecordedTake) -> Unit,
+    onShare: (RecordedTake) -> Unit, onDelete: (RecordedTake) -> Unit, onRename: (RecordedTake) -> Unit,
+) {
+    val title = takeDisplayTitle(take)
+    Surface(shape = RoundedCornerShape(22.dp), color = LibraryPanel,
+        border = BorderStroke(1.dp, LibraryRule.copy(alpha = .7f))) {
+        Column {
+            TakeMediaPreview(take, { onPlay(take) }, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
+            Column(Modifier.padding(14.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    Column(Modifier.weight(1f).padding(top = 2.dp)) {
+                        Text(title, color = LibraryText, fontSize = 17.sp, lineHeight = 23.sp,
+                            fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(libraryDate(take.createdAt), color = LibraryMuted, fontSize = 12.sp, lineHeight = 18.sp,
+                            modifier = Modifier.padding(top = 5.dp))
                     }
+                    TakeOptions(take, onShare, onDelete, onRename)
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(takeFileSize(take.sizeBytes), color = LibraryText, fontSize = 12.sp, lineHeight = 18.sp,
+                        fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    if (take.width > 0 && take.height > 0) Text("${take.width}×${take.height}", color = LibraryMuted,
+                        fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(start = 12.dp))
+                }
+                TakeExportAction(take, onExport)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TakeOptions(
+    take: RecordedTake, onShare: (RecordedTake) -> Unit, onDelete: (RecordedTake) -> Unit,
+    onRename: (RecordedTake) -> Unit,
+) {
+    var expanded by rememberSaveable(take.id) { mutableStateOf(false) }
+    val title = takeDisplayTitle(take)
+    val description = if (title == "Take") "Mais opções do take de ${libraryDate(take.createdAt)}" else "Mais opções de $title"
+    Box {
+        IconButton(onClick = { expanded = true }, modifier = Modifier.size(48.dp)
+            .semantics { contentDescription = description }) {
+            Canvas(Modifier.size(20.dp)) {
+                for (position in listOf(.2f, .5f, .8f)) drawCircle(LibraryMuted, 1.6.dp.toPx(), Offset(size.width / 2, size.height * position))
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text("Renomear") }, onClick = { expanded = false; onRename(take) })
+            DropdownMenuItem(text = { Text("Compartilhar") }, onClick = { expanded = false; onShare(take) })
+            DropdownMenuItem(text = { Text("Excluir", color = MaterialTheme.colorScheme.error) }, onClick = { expanded = false; onDelete(take) })
+        }
+    }
+}
+
+@Composable
+private fun EmptyTakes(onOpenStudio: () -> Unit, compact: Boolean) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = LibraryPanel,
+        border = BorderStroke(1.dp, LibraryRule.copy(alpha = .7f))) {
+        Column(Modifier.padding(horizontal = 24.dp, vertical = if (compact) 24.dp else 36.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(width = 160.dp, height = 112.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(width = 132.dp, height = 82.dp).rotate(-9f)
+                    .background(LibraryRule.copy(alpha = .4f), RoundedCornerShape(16.dp)))
+                Surface(Modifier.size(width = 132.dp, height = 82.dp).rotate(4f), color = LibraryNavy,
+                    shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, LibraryRule)) {
+                    Box(contentAlignment = Alignment.Center) { PlayMark(Modifier.size(30.dp), LibraryRed) }
                 }
             }
+            Text("Seu primeiro take\ncomeça no estúdio.", color = LibraryText, fontSize = 24.sp, lineHeight = 30.sp,
+                fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 20.dp))
+            Text("Depois de gravar, seus vídeos aparecem aqui para revisar, exportar e compartilhar.",
+                color = LibraryMuted, fontSize = 14.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 12.dp, bottom = 24.dp))
+            Button(onClick = onOpenStudio, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(14.dp)) { Text("Abrir estúdio") }
         }
     }
 }
@@ -300,7 +219,7 @@ fun CloudScriptsDialog(scripts: List<ScriptDocument>, onOpen: (ScriptDocument) -
         title = { Text("Roteiros da conta") },
         text = {
             Column(Modifier.heightIn(max = bodyHeight), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Abra uma cópia para editar neste aparelho.", color = LibraryMuted, style = MaterialTheme.typography.bodyMedium)
+                Text("O texto escolhido passa a ser seu roteiro neste aparelho.", color = LibraryMuted, style = MaterialTheme.typography.bodyMedium)
                 if (scripts.isEmpty()) {
                     Box(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                         LibraryEmptyState("Sua conta ainda não tem roteiros.", "Os textos salvos na conta aparecerão aqui.")
@@ -309,14 +228,12 @@ fun CloudScriptsDialog(scripts: List<ScriptDocument>, onOpen: (ScriptDocument) -
                     LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(scripts, key = { it.id }) { script ->
                             Column {
-                                Text(script.title.ifBlank { "Sem título" }, style = MaterialTheme.typography.titleMedium,
-                                    color = LibraryText, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(scriptSnippet(script), style = MaterialTheme.typography.bodySmall, color = LibraryMuted,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                                Text(scriptSnippet(script), style = MaterialTheme.typography.bodyMedium, color = LibraryText,
+                                    maxLines = 3, overflow = TextOverflow.Ellipsis)
                                 Text(libraryDate(script.updatedAt), style = MaterialTheme.typography.labelSmall,
                                     color = LibraryMuted, modifier = Modifier.padding(top = 8.dp))
                                 TextButton(onClick = { onOpen(script) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text("Abrir cópia local")
+                                    Text("Usar este texto")
                                 }
                                 HorizontalDivider(color = LibraryRule)
                             }
@@ -332,25 +249,12 @@ fun CloudScriptsDialog(scripts: List<ScriptDocument>, onOpen: (ScriptDocument) -
 }
 
 @Composable
-private fun TakeActions(
+private fun TakeExportAction(
     take: RecordedTake,
-    onPlay: (RecordedTake) -> Unit,
     onExport: (RecordedTake) -> Unit,
-    onShare: (RecordedTake) -> Unit,
-    onDelete: (RecordedTake) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Column(modifier) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onPlay(take) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Revisar") }
-            Button(onClick = { onExport(take) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = LibraryRed, contentColor = Color.White)) { Text("Exportar") }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { onShare(take) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Compartilhar", color = LibraryText) }
-            TextButton(onClick = { onDelete(take) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Excluir", color = LibraryMuted) }
-        }
-    }
+    Button(onClick = { onExport(take) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = LibraryRed, contentColor = Color.White)) { Text("Exportar") }
 }
 
 @Composable
@@ -364,69 +268,6 @@ private fun LibraryEmptyState(title: String, detail: String) {
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, color = LibraryText, fontWeight = FontWeight.Medium)
         Text(detail, style = MaterialTheme.typography.bodyMedium, color = LibraryMuted, modifier = Modifier.padding(top = 8.dp))
-    }
-}
-
-@Composable
-private fun TakeThumbnail(take: RecordedTake, modifier: Modifier = Modifier) {
-    val disposed = remember(take.path, take.createdAt) { AtomicBoolean(false) }
-    DisposableEffect(disposed) {
-        onDispose { disposed.set(true) }
-    }
-    val bitmap by produceState<Bitmap?>(initialValue = null, take.path, take.createdAt) {
-        value = null
-        var candidate: Bitmap? = null
-        try {
-            withContext(Dispatchers.IO) { candidate = readTakeThumbnail(take.path) }
-            ensureActive()
-            if (!disposed.get()) {
-                value = candidate
-                // Ownership passes to Compose; recycling a displayed image races with RenderThread.
-                candidate = null
-            }
-        } finally {
-            candidate?.let { if (!it.isRecycled) it.recycle() }
-        }
-    }
-    val image = remember(bitmap) { bitmap?.asImageBitmap() }
-    Box(modifier.background(LibraryPanel), contentAlignment = Alignment.Center) {
-        if (image != null) {
-            Image(image, contentDescription = "Prévia do take ${take.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-        } else {
-            PlayMark(Modifier.size(28.dp), color = LibraryMuted)
-        }
-        Text(takeDuration(take.durationMs), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace,
-            color = Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                .background(LibraryNavy.copy(alpha = 0.9f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 3.dp))
-    }
-}
-
-/** API 26 has getFrameAtTime; scaled-frame retrieval starts at API 27. */
-private fun readTakeThumbnail(path: String): Bitmap? {
-    val file = File(path)
-    if (!file.isFile || file.length() == 0L) return null
-    val retriever = MediaMetadataRetriever()
-    var original: Bitmap? = null
-    return try {
-        retriever.setDataSource(file.absolutePath)
-        original = retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: return null
-        val frame = original
-        val longest = maxOf(frame.width, frame.height)
-        if (longest <= 320) {
-            original = null
-            frame
-        } else {
-            val factor = 320f / longest
-            Bitmap.createScaledBitmap(frame, (frame.width * factor).toInt().coerceAtLeast(1),
-                (frame.height * factor).toInt().coerceAtLeast(1), true)
-        }
-    } catch (_: Exception) {
-        null
-    } catch (_: OutOfMemoryError) {
-        null
-    } finally {
-        original?.let { if (!it.isRecycled) it.recycle() }
-        runCatching { retriever.release() }
     }
 }
 
@@ -458,14 +299,44 @@ private fun PlayMark(modifier: Modifier = Modifier, color: Color = LibraryText) 
 private fun scriptSnippet(script: ScriptDocument): String = script.content.trim().replace(Regex("\\s+"), " ")
     .ifBlank { "Escreva ou cole seu texto no editor." }
 
+private val automaticTakeTitle = Regex(
+    "^Take (?:\\p{Nd}{2}/\\p{Nd}{2}/\\p{Nd}{4} \\p{Nd}{2}:\\p{Nd}{2}|\\p{Nd}{2}/\\p{Nd}{2} · \\p{Nd}{2}:\\p{Nd}{2})$",
+)
+
+/** Hide only the known automatic timestamp names; custom titles stay untouched. */
+internal fun takeDisplayTitle(take: RecordedTake): String = when {
+    take.title.isBlank() || automaticTakeTitle.matches(take.title) -> "Take"
+    else -> take.title
+}
+
+private fun takeFileSize(bytes: Long): String = when {
+    bytes <= 0L -> "Tamanho indisponível"
+    bytes < 100_000L -> "< 0,1 MB"
+    bytes < 1_000_000_000L -> String.format(Locale.forLanguageTag("pt-BR"), "%.1f MB", bytes / 1_000_000.0)
+    else -> String.format(Locale.forLanguageTag("pt-BR"), "%.1f GB", bytes / 1_000_000_000.0)
+}
+
 private fun libraryDate(timestamp: Long): String = if (timestamp > 0L) {
     SimpleDateFormat("dd/MM/yyyy 'às' HH:mm", Locale.forLanguageTag("pt-BR")).format(Date(timestamp))
 } else "Data indisponível"
 
-private fun takeDuration(durationMs: Long): String {
-    val seconds = durationMs.coerceAtLeast(0L) / 1000L
-    val hours = seconds / 3600L
-    val minutes = (seconds / 60L) % 60L
-    return if (hours > 0L) "%d:%02d:%02d".format(Locale.ROOT, hours, minutes, seconds % 60L)
-    else "%02d:%02d".format(Locale.ROOT, minutes, seconds % 60L)
+@Preview(name = "Takes · biblioteca", widthDp = 390, heightDp = 760, showBackground = true)
+@Preview(name = "Takes · paisagem", widthDp = 760, heightDp = 360, showBackground = true)
+@Preview(name = "Takes · cartões com fonte ampliada", widthDp = 320, heightDp = 760, fontScale = 1.5f, showBackground = true)
+@Composable
+private fun TakesLibraryPreview() {
+    val samples = listOf(
+        RecordedTake(id = "preview-1", title = "Take 19/10/2026 16:32", path = "", durationMs = 84_000, createdAt = 1_792_436_520_000,
+            sizeBytes = 93_600_000L),
+        RecordedTake(id = "preview-2", title = "Apresentação do projeto", path = "", durationMs = 1_460_000, createdAt = 1_792_432_800_000,
+            width = 1920, height = 1080, sizeBytes = 1_245_000_000L),
+    )
+    Open_scriptTheme { TakesPage(samples, {}, {}, {}, {}, {}) }
+}
+
+@Preview(name = "Takes · vazio", widthDp = 390, heightDp = 700, showBackground = true)
+@Preview(name = "Takes · fonte ampliada", widthDp = 320, heightDp = 760, fontScale = 1.5f, showBackground = true)
+@Composable
+private fun EmptyTakesPreview() {
+    Open_scriptTheme { TakesPage(emptyList(), {}, {}, {}, {}, {}) }
 }

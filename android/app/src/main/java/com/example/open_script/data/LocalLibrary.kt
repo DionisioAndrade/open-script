@@ -37,7 +37,8 @@ class LocalLibrary(context: Context) {
     fun takes(ownerId: String?): List<RecordedTake> {
         val indexed = indexedTakes(ownerId).mapNotNull { take ->
             val file = ownedTakeFile(ownerId, take.path)
-            if (file != null && file.isFile && file.length() > 0) take.copy(path = file.absolutePath) else null
+            val size = file?.takeIf { it.isFile }?.length() ?: 0L
+            if (file != null && size > 0L) take.copy(path = file.absolutePath, sizeBytes = size) else null
         }
         val knownPaths = indexed.map { it.path }.toSet()
         val recovered = takeDirectory(ownerId).listFiles().orEmpty()
@@ -66,6 +67,20 @@ class LocalLibrary(context: Context) {
         val values = takes(ownerId).filterNot { it.id == take.id || it.path == file.absolutePath }
         if (file.exists() && !file.delete()) throw IOException("Não foi possível excluir a gravação.")
         writeTakes(ownerId, values)
+    }
+
+    /** Resolve identity inside this owner's library; never accept a path supplied by the UI. */
+    @Synchronized
+    fun renameTake(ownerId: String?, takeId: String, title: String): List<RecordedTake> {
+        val normalized = TakeNames.normalize(title)
+        val current = takes(ownerId)
+        val existing = current.firstOrNull { it.id == takeId }
+            ?: throw IOException("Este take não está disponível nesta biblioteca.")
+        if (existing.title == normalized) return current
+        val renamed = current.map { if (it.id == takeId) it.copy(title = normalized) else it }
+        // Return new UI state only after the atomic index write succeeds.
+        writeTakes(ownerId, renamed)
+        return renamed
     }
 
     @Synchronized
@@ -119,6 +134,7 @@ class LocalLibrary(context: Context) {
                 title = "Gravação recuperada", path = file.absolutePath, durationMs = duration,
                 createdAt = file.lastModified().takeIf { it > 0 } ?: System.currentTimeMillis(),
                 width = if (rotated) height else width, height = if (rotated) width else height,
+                sizeBytes = file.length(),
             )
         } catch (_: Exception) {
             // An incomplete or unsupported MP4 is preserved on disk but not shown as complete.

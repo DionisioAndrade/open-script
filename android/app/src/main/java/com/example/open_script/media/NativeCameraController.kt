@@ -108,7 +108,8 @@ class NativeCameraController(context: Context) {
                     reportError(if (front) "Este aparelho não tem câmera frontal disponível." else "Este aparelho não tem câmera traseira disponível.")
                     return@withContext
                 }
-                view.scaleType = PreviewView.ScaleType.FIT_CENTER
+                // Fill the preview without letterboxing; video capture keeps its own framing.
+                view.scaleType = PreviewView.ScaleType.FILL_CENTER
                 // TextureView supports Compose overlays consistently; CameraX mirrors only the front preview.
                 view.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                 view.scaleX = 1f

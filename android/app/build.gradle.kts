@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val nativeApiOrigin = providers.gradleProperty("openscript.apiOrigin").orNull?.trim().orEmpty()
+fun buildStringLiteral(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n") + "\""
+
 android {
     namespace = "com.example.open_script"
     compileSdk {
@@ -17,9 +20,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_ORIGIN", buildStringLiteral(nativeApiOrigin))
     }
 
     buildTypes {
+        debug {
+            if (nativeApiOrigin.isBlank()) {
+                buildConfigField("String", "API_ORIGIN", buildStringLiteral("http://10.0.2.2:8000"))
+            }
+        }
         release {
             optimization {
                 enable = true

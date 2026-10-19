@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.open_script.data.*
 import com.example.open_script.media.*
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,11 +50,16 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     init {
         viewModelScope.launch {
             val session = withContext(Dispatchers.IO) { runCatching { vault.load() }.getOrNull() }
-            val origin = connection.getString("origin", if (BuildConfig.DEBUG) "http://10.0.2.2:8000" else "").orEmpty()
+            val savedOrigin = connection.getString("origin", null)
+            val origin = ServerConnection.resolveOrigin(savedOrigin, BuildConfig.API_ORIGIN, session != null, BuildConfig.DEBUG)
             try {
+                if (session != null && savedOrigin == null && origin.isNotBlank()) {
+                    withContext(Dispatchers.IO) { saveConnectionOrigin(origin) }
+                }
                 val library = withContext(Dispatchers.IO) { local.load(session?.user?.id) }
                 val takes = withContext(Dispatchers.IO) { local.takes(session?.user?.id) }
-                mutable.value = StudioState(library, takes, session, session?.user?.id, origin, loading = false)
+                mutable.value = StudioState(library, takes, session, session?.user?.id, origin, loading = false,
+                    requiresLogin = session != null && origin.isBlank())
             } catch (error: Exception) {
                 mutable.update { it.copy(loading = false, message = error.message ?: "Não foi possível abrir os dados locais.") }
             }
@@ -65,30 +73,40 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(300)
-            try { persist() } catch (error: Exception) { notify(error.message ?: "Não foi possível salvar o roteiro. Confira o espaço livre.") }
+            try { persist() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { notify(error.message ?: "Não foi possível salvar o roteiro. Confira o espaço livre.") }
         }
     }
 
     private suspend fun persist() = persistence.withLock {
         val current = mutable.value
+        if (current.loading) return@withLock
         withContext(Dispatchers.IO) { local.save(current.ownerId, current.library) }
     }
 
     fun flushDraft() {
+        if (mutable.value.loading) return
         saveJob?.cancel()
-        saveJob = viewModelScope.launch { try { persist() } catch (error: Exception) { notify(error.message ?: "Não foi possível salvar o roteiro.") } }
+        saveJob = viewModelScope.launch {
+            try { persist() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { notify(error.message ?: "Não foi possível salvar o roteiro.") }
+        }
     }
 
-    fun editDraft(title: String, content: String) {
-        if (title.length > 100 || content.toByteArray(Charsets.UTF_8).size > 102400) {
-            notify("Use até 100 caracteres no título e 100 KiB no roteiro.")
+    fun editDraft(content: String) {
+        if (mutable.value.loading) return
+        if (content.toByteArray(Charsets.UTF_8).size > 102400) {
+            notify("Use até 100 KiB no roteiro.")
             return
         }
-        mutable.update { it.copy(library = it.library.copy(draft = it.library.draft.copy(title = title, content = content, updatedAt = System.currentTimeMillis()))) }
+        mutable.update { it.copy(library = it.library.copy(draft = it.library.draft.copy(content = content, updatedAt = System.currentTimeMillis()))) }
         persistSoon()
     }
 
     fun setSettings(settings: PromptSettings) {
+        if (mutable.value.loading) return
         mutable.update { it.copy(library = it.library.copy(settings = settings)) }
         persistSoon()
     }
@@ -97,20 +115,6 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val draft = snapshot.draft
         val scripts = (snapshot.scripts.filterNot { it.id == draft.id } + draft).sortedByDescending { it.updatedAt }
         return snapshot.copy(scripts = scripts)
-    }
-
-    fun saveDraft() {
-        mutable.update { it.copy(library = savedLibrary(it.library)) }
-        persistSoon()
-        notify("Roteiro salvo no aparelho.")
-    }
-
-    fun newDraft() {
-        mutable.update {
-            val snapshot = if (it.library.draft.content.isNotBlank()) savedLibrary(it.library) else it.library
-            it.copy(library = snapshot.copy(draft = ScriptDocument()))
-        }
-        persistSoon()
     }
 
     fun openScript(script: ScriptDocument, cloudCopy: Boolean = false) {
@@ -122,22 +126,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         persistSoon()
     }
 
-    fun deleteScript(script: ScriptDocument) {
-        mutable.update {
-            it.copy(library = it.library.copy(
-                scripts = it.library.scripts.filterNot { document -> document.id == script.id },
-                draft = if (it.library.draft.id == script.id) ScriptDocument() else it.library.draft,
-            ))
-        }
-        persistSoon()
-        notify("Cópia local excluída.")
-    }
-
     fun startRecording(includeAudio: Boolean) {
         if (mutable.value.preparing || camera.state.value.status != CaptureStatus.IDLE) return
         mutable.update { it.copy(preparing = true) }
         val owner = mutable.value.ownerId
-        val title = mutable.value.library.draft.title.ifBlank { "Meu vídeo" }
+        val title = "Take ${SimpleDateFormat("dd/MM '·' HH:mm", Locale.getDefault()).format(Date())}"
         viewModelScope.launch {
             try {
                 persist()
@@ -167,6 +160,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         notify("Take excluído do aparelho.")
     }
 
+    fun renameTake(takeId: String, title: String) {
+        val current = mutable.value
+        if (current.loading || current.busy) return
+        val owner = current.ownerId
+        runOperation {
+            val takes = withContext(Dispatchers.IO) { local.renameTake(owner, takeId, title) }
+            mutable.update { if (it.ownerId == owner) it.copy(takes = takes) else it }
+            if (mutable.value.ownerId == owner) notify("Nome do take atualizado.")
+        }
+    }
+
     fun copyVideo(source: File, destination: android.net.Uri) = runOperation {
         withContext(Dispatchers.IO) {
             source.inputStream().use { input ->
@@ -181,7 +185,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun api(authenticated: Boolean = true): ApiClient {
         val value = mutable.value
-        if (value.origin.isBlank()) throw ApiException("Configure o endereço do servidor para usar sua conta.")
+        if (value.origin.isBlank()) throw ApiException("O acesso à conta está indisponível nesta versão do aplicativo.")
         if (authenticated && (value.session == null || value.requiresLogin)) throw ApiException("Entre na sua conta para continuar.")
         return ApiClient(value.origin, if (authenticated) value.session?.accessToken else null)
     }
@@ -206,22 +210,26 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private suspend fun activate(session: AuthSession?) {
         saveJob?.cancelAndJoin()
         persist()
-        withContext(Dispatchers.IO) { if (session == null) vault.clear() else vault.save(session) }
+        val previousOrigin = mutable.value.origin
+        val origin = if (session == null && previousOrigin.isBlank()) BuildConfig.API_ORIGIN else previousOrigin
+        withContext(Dispatchers.IO) {
+            if (session == null) {
+                vault.clear()
+                if (origin != previousOrigin) saveConnectionOrigin(origin)
+            } else {
+                saveConnectionOrigin(origin)
+                vault.save(session)
+            }
+        }
         val owner = session?.user?.id
         val library = withContext(Dispatchers.IO) { local.load(owner) }
         val takes = withContext(Dispatchers.IO) { local.takes(owner) }
-        mutable.update { it.copy(session = session, ownerId = owner, library = library, takes = takes, requiresLogin = false,
+        mutable.update { it.copy(session = session, ownerId = owner, library = library, takes = takes, origin = origin, requiresLogin = false,
             cloudScripts = null, terms = null, privacy = null, legalDocument = null) }
     }
 
-    fun setOrigin(origin: String) = runOperation {
-        val normalized = OriginValidation.normalize(origin, allowLocalHttp = BuildConfig.DEBUG)
-        if (normalized != mutable.value.origin) {
-            if (mutable.value.session != null) activate(null)
-            connection.edit().putString("origin", normalized).apply()
-            mutable.update { it.copy(origin = normalized, terms = null, privacy = null, legalDocument = null) }
-        }
-        notify("Servidor atualizado.")
+    private fun saveConnectionOrigin(origin: String) {
+        check(connection.edit().putString("origin", origin).commit()) { "Não foi possível salvar seu acesso no aparelho." }
     }
 
     fun login(email: String, password: String) = runOperation {
@@ -272,6 +280,18 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        // A normal Activity exit cancels viewModelScope. Finish its latest text write
+        // independently, behind any write already in progress, before releasing this scope.
+        val latest = mutable.value
+        saveJob?.cancel()
+        if (!latest.loading) {
+            val finalWrite = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            finalWrite.launch {
+                try { persistence.withLock { local.save(latest.ownerId, latest.library) } }
+                catch (error: Exception) { android.util.Log.w("OpenScript", "Não foi possível concluir o salvamento do roteiro.", error) }
+                finally { finalWrite.cancel() }
+            }
+        }
         camera.unbind()
         exporter.cancel()
         super.onCleared()

@@ -2,6 +2,7 @@ package com.example.open_script.media
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -81,6 +82,71 @@ class ExportProfilesTest {
         assertEquals(30, settings.frameRate)
         assertEquals(8_000_000, settings.videoBitsPerSecond)
         assertEquals(128_000, settings.audioBitsPerSecond)
+    }
+
+    @Test
+    fun sixtyFpsIsAvailableOnlyWithinTheOriginalFrameBudget() {
+        val profile = ExportProfile("custom", "Personalizada", frameRate = 60)
+        val fullRate = ExportProfiles.settings(profile, 1080, 1920, inputFrameRate = 60f)
+        assertEquals(60, fullRate.frameRate)
+        assertEquals(16_000_000, fullRate.videoBitsPerSecond)
+        assertFalse(fullRate.frameRateLimitedBySource)
+
+        val sourceLimited = ExportProfiles.settings(profile, 1080, 1920, inputFrameRate = 30f)
+        assertEquals(30, sourceLimited.frameRate)
+        assertEquals(8_000_000, sourceLimited.videoBitsPerSecond)
+        assertTrue(sourceLimited.frameRateLimitedBySource)
+
+        val lowerRequested = ExportProfiles.settings(profile.copy(frameRate = 24), 1080, 1920, inputFrameRate = 60f)
+        assertEquals(24, lowerRequested.frameRate)
+        assertFalse(lowerRequested.frameRateLimitedBySource)
+    }
+
+    @Test
+    fun fractionalAndUnknownSourceFrameRatesDoNotInventFramesOrRejectTheVideo() {
+        val profile = ExportProfile("custom", "Personalizada", frameRate = 60)
+        // Media3's integer ceiling must not turn 29.97 fps into 29 fps and drop extra frames.
+        val fractional = ExportProfiles.settings(profile, 1080, 1920, inputFrameRate = 29.97f)
+        assertEquals(30, fractional.frameRate)
+        assertTrue(fractional.frameRateLimitedBySource)
+
+        for (unknown in listOf(null, Float.NaN, Float.POSITIVE_INFINITY, 0f, -1f)) {
+            val settings = ExportProfiles.settings(profile, 1080, 1920, inputFrameRate = unknown)
+            assertEquals(60, settings.frameRate)
+            assertFalse(settings.frameRateLimitedBySource)
+        }
+    }
+
+    @Test
+    fun containersKeepTheirOwnExtensionAndCompatibleCodecs() {
+        val mp4 = ExportProfiles.settings(ExportProfile("custom", "Personalizada"), 1080, 1920).format
+        assertEquals("mp4", mp4.extension)
+        assertEquals("video/mp4", mp4.mimeType)
+        assertTrue(mp4.acceptsCodecs("video/avc", "audio/mp4a-latm"))
+        assertTrue(mp4.acceptsCodecs("video/avc", null)) // A take may be silent.
+        assertFalse(mp4.acceptsCodecs("video/hevc", "audio/mp4a-latm"))
+
+        val webm = ExportProfiles.settings(
+            ExportProfile("custom", "Personalizada", format = "webm"), 1080, 1920,
+        ).format
+        assertEquals("webm", webm.extension)
+        assertEquals("video/webm", webm.mimeType)
+        assertTrue(webm.acceptsCodecs("video/x-vnd.on2.vp8", "audio/opus"))
+        assertFalse(webm.acceptsCodecs("video/avc", "audio/opus"))
+        assertFalse(webm.acceptsCodecs("video/x-vnd.on2.vp8", "audio/mp4a-latm"))
+    }
+
+    @Test
+    fun sharingUsesTheActualExtensionAndDoesNotGuessUnknownContainers() {
+        assertEquals("video/mp4", ExportProfiles.formatForFileName("take.MP4")?.mimeType)
+        assertEquals("video/webm", ExportProfiles.formatForFileName("openscript-123.webm")?.mimeType)
+        assertNull(ExportProfiles.formatForFileName("take.mp4.mov"))
+        assertNull(ExportProfiles.formatForFileName("take"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun unsupportedContainerIsRejectedInsteadOfRenamingAnMp4() {
+        ExportProfiles.settings(ExportProfile("custom", "Personalizada", format = "mov"), 1080, 1920)
     }
 
     @Test(expected = IllegalArgumentException::class)

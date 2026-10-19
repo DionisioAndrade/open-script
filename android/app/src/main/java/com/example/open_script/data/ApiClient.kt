@@ -131,7 +131,7 @@ class ApiClient(origin: String, private val token: String? = null) {
         } catch (_: JSONException) {
             invalidResponse()
         } catch (_: IOException) {
-            throw ApiException("Não foi possível conectar ao servidor. Confira a conexão e a origem configurada.", code = "connection_error")
+            throw ApiException("Não foi possível acessar sua conta. Confira sua conexão e tente novamente.", code = "connection_error")
         }
     }
 
@@ -160,7 +160,7 @@ class ApiClient(origin: String, private val token: String? = null) {
             }
             val status = connection.responseCode
             if (status in 300..399) throw ApiException(
-                "O servidor redirecionou a chamada. Configure sua origem HTTPS definitiva.", status, "redirect_refused",
+                "O serviço de conta está indisponível no momento. Tente novamente mais tarde.", status, "redirect_refused",
             )
             if (status == 204) return JSONObject()
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream

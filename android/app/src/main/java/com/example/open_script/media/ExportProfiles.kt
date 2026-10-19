@@ -2,6 +2,7 @@ package com.example.open_script.media
 
 import android.content.Context
 import org.json.JSONObject
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -15,9 +16,23 @@ data class ExportProfile(
     val frameRate: Int = 30,
     val note: String = "",
     val advice: String = "",
+    val format: String = "mp4",
 )
 
 data class ExportDimensions(val width: Int, val height: Int)
+
+/** Container and its actual encoding, kept together so filenames never mislabel the media. */
+data class ExportFormat(
+    val id: String,
+    val label: String,
+    val extension: String,
+    val mimeType: String,
+    val videoMimeType: String,
+    val audioMimeType: String,
+) {
+    fun acceptsCodecs(video: String?, audio: String?): Boolean =
+        (video == null || video == videoMimeType) && (audio == null || audio == audioMimeType)
+}
 
 data class ExportSettings(
     val dimensions: ExportDimensions,
@@ -25,12 +40,28 @@ data class ExportSettings(
     val videoBitsPerSecond: Int,
     val audioBitsPerSecond: Int,
     val limitedBySource: Boolean,
+    val format: ExportFormat = ExportProfiles.formats.first(),
+    val frameRateLimitedBySource: Boolean = false,
 )
 
 /** Social limits are advice for the person publishing, never recording/export cutoffs. */
 object ExportProfiles {
     val resolutions: List<Int> = listOf(360, 720, 1080)
     val aspects: List<String> = listOf("9:16", "4:5", "1:1", "16:9", "2:3")
+    val frameRates: List<Int> = listOf(24, 30, 60)
+    val formats: List<ExportFormat> = listOf(
+        ExportFormat("mp4", "MP4", "mp4", "video/mp4", "video/avc", "audio/mp4a-latm"),
+        ExportFormat("webm", "WebM", "webm", "video/webm", "video/x-vnd.on2.vp8", "audio/opus"),
+    )
+
+    /** An unknown filename must not be advertised as a known video container. */
+    fun formatForFileName(name: String): ExportFormat? = formats.firstOrNull {
+        name.substringAfterLast('.', "").equals(it.extension, ignoreCase = true)
+    }
+
+    /** Unlike cosmetic settings, an invalid container cannot silently change to another format. */
+    fun format(id: String): ExportFormat = formats.firstOrNull { it.id == id }
+        ?: throw IllegalArgumentException("Escolha MP4 ou WebM para exportar o vídeo.")
 
     private data class Rates(
         val video: Map<Int, Map<String, Int>>,
@@ -84,6 +115,7 @@ object ExportProfiles {
                 frameRate = normalizedFrameRate(item.optInt("frameRate", 30)),
                 note = item.optString("note"),
                 advice = suggestions.joinToString(" "),
+                format = item.optString("format", "mp4").takeIf { id -> formats.any { it.id == id } } ?: "mp4",
             )
         }
         return if (profiles.any { it.id == "custom" }) profiles else {
@@ -109,7 +141,12 @@ object ExportProfiles {
     }
 
     /** Never increase the source's short edge; padding keeps the complete camera frame. */
-    fun settings(profile: ExportProfile, inputWidth: Int, inputHeight: Int): ExportSettings {
+    fun settings(
+        profile: ExportProfile,
+        inputWidth: Int,
+        inputHeight: Int,
+        inputFrameRate: Float? = null,
+    ): ExportSettings {
         require(inputWidth >= 2 && inputHeight >= 2) { "O vídeo não tem dimensões válidas." }
         val requested = dimensions(profile.aspect, profile.resolution)
         val sourceShortSide = min(inputWidth, inputHeight)
@@ -124,18 +161,27 @@ object ExportProfiles {
         val baseRate = currentRates.video.getValue(resolution).getValue(quality)
         val referencePixels = resolution.toDouble() * resolution * 16.0 / 9.0
         val pixelRatio = output.width.toDouble() * output.height / referencePixels
+        val requestedFrameRate = normalizedFrameRate(profile.frameRate)
+        val sourceFrameRate = inputFrameRate?.takeIf { it.isFinite() && it > 0f }
+        // Media3 accepts an integer maximum. Rounding UP a fractional source rate (29.97)
+        // preserves its frames; EditedMediaItem and FrameDropEffect never duplicate them.
+        val frameRate = sourceFrameRate?.let { ceil(min(requestedFrameRate.toFloat(), it).toDouble()).toInt() }
+            ?: requestedFrameRate
         return ExportSettings(
             dimensions = output,
-            frameRate = normalizedFrameRate(profile.frameRate),
-            videoBitsPerSecond = (baseRate * pixelRatio).roundToInt().coerceAtLeast(128_000),
+            frameRate = frameRate.coerceAtLeast(1),
+            videoBitsPerSecond = (baseRate * pixelRatio * maxOf(1.0, frameRate / 30.0))
+                .roundToInt().coerceAtLeast(128_000),
             audioBitsPerSecond = currentRates.audio.getValue(quality),
             limitedBySource = output != requested,
+            format = format(profile.format),
+            frameRateLimitedBySource = sourceFrameRate != null && sourceFrameRate < requestedFrameRate,
         )
     }
 
     private fun normalizedResolution(value: Int): Int = value.takeIf { it in resolutions } ?: 720
 
-    private fun normalizedFrameRate(value: Int): Int = if (value == 24) 24 else 30
+    private fun normalizedFrameRate(value: Int): Int = value.takeIf { it in frameRates } ?: 30
 
     private fun evenFloor(value: Double): Int = (floor(value / 2).toInt() * 2).coerceAtLeast(2)
 }

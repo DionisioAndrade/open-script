@@ -16,7 +16,7 @@ data class PromptSettings(
 
 data class ScriptDocument(
     val id: String = UUID.randomUUID().toString(),
-    val title: String = "Meu roteiro",
+    val title: String = "",
     val content: String = "",
     val updatedAt: Long = System.currentTimeMillis(),
     val remoteId: String? = null,
@@ -31,7 +31,20 @@ data class RecordedTake(
     val createdAt: Long = System.currentTimeMillis(),
     val width: Int = 1080,
     val height: Int = 1920,
+    val sizeBytes: Long = 0L,
 )
+
+/** Titles are display metadata; a rename never changes the recording's filename or identity. */
+object TakeNames {
+    const val MAX_LENGTH = 120
+
+    fun normalize(value: String): String {
+        val title = value.trim()
+        require(title.isNotEmpty()) { "Digite um nome para o take." }
+        require(title.codePointCount(0, title.length) <= MAX_LENGTH) { "Use até $MAX_LENGTH caracteres no nome do take." }
+        return title
+    }
+}
 
 data class UserProfile(val id: String, val displayName: String, val email: String)
 data class AuthSession(val accessToken: String, val expiresAt: String, val user: UserProfile) {
