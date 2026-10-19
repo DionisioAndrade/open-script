@@ -21,6 +21,10 @@ Estúdio web de gravação com teleprompter, feito com Django e JavaScript. Cole
 
 O vídeo e o áudio são capturados pelo navegador. A prévia mostra todo o enquadramento fornecido pela câmera sem ampliar, recortar ou distorcer a imagem. Quando o aparelho permite ajustar o zoom, o estúdio solicita 1×, respeitando os limites da câmera. O campo de visão disponível ainda depende da lente e do navegador. A gravação é sempre vertical 9:16 em 1080 × 1920 e preserva a imagem completa: se a câmera entregar outra proporção, espaços azul-escuros completam o quadro sem cortar suas laterais. Esses espaços também podem aparecer na prévia quando a proporção da tela for diferente da câmera. A resolução capturada não acrescenta detalhes que a câmera não forneceu. A opção de espelhar afeta a prévia. O roteiro sobreposto serve para leitura e **não aparece no vídeo exportado**. O servidor guarda contas e sessões e, quando enviados explicitamente pela API nativa, roteiros e preferências. Na versão web, a captura de vídeo e áudio permanece no navegador, sem upload. Exporte e salve seus vídeos antes de fechar ou atualizar a página: os originais permanecem na memória durante a sessão.
 
+## Aplicativo Android v1.0
+
+O projeto nativo está em [`android/`](android/), com Kotlin e Jetpack Compose: teleprompter, gravação com pausa e retomada, biblioteca local de roteiros e takes, revisão e exportação MP4. Funciona sem conta; login e sincronização explícita usam a API do servidor. Consulte o [guia Android](docs/android-v1.md) para executar, conectar ao servidor e gerar o APK. A implementação iOS ainda não foi iniciada.
+
 ## API para aplicativo nativo
 
 O servidor oferece uma API JSON versionada em `/api/v1/` para aplicativos Android/iOS com telas próprias: login/cadastro por token, recuperação de acesso, conta, roteiros e preferências por usuário, documentos legais e perfis de exportação. A [documentação de integração](docs/native-api.md) inclui caminhos, exemplos, revisões para evitar sobrescrever edições e limites. O [contrato OpenAPI](api/openapi.json) também está disponível em `/api/v1/openapi.json`.
